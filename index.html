@@ -1,0 +1,2056 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>OCI Tenancy Atlas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.16.1/dist/mermaid.min.js"></script>
+<script src="vendor/ondine-0.0.3.js"></script>
+<style>
+/* Layout: sticky tab bar; Build = outline tree + inspector beside a live diagram on wide screens, stacked tabs on phones */
+:root {
+  --bg: #e9eeec; --surface: #f7f9f8; --sunk: #dfe6e3; --ink: #13201d; --muted: #566865; --line: #c3cfcb;
+  --accent: #0d6b5b; --accent-ink: #ffffff; --accent-soft: #cfe6df;
+  --ok: #2c7a35; --warn: #9a5b00; --err: #b0281f; --info: #2f5f9e;
+  --k-tenancy: #5b3fa8; --k-comp: #0d6b5b; --k-vcn: #2f5f9e; --k-subnet: #4c7f9e; --k-res: #7a5a2a; --k-drg: #8a3d6d;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1513; --surface: #151f1d; --sunk: #0a100f; --ink: #e1ebe8; --muted: #8fa29e; --line: #2a3835;
+  --accent: #4cc2a8; --accent-ink: #06231d; --accent-soft: #173a33;
+  --ok: #6cc477; --warn: #e3a64a; --err: #f07a70; --info: #7fb0ee;
+  --k-tenancy: #a993f0; --k-comp: #4cc2a8; --k-vcn: #7fb0ee; --k-subnet: #8fc3dc; --k-res: #d9b278; --k-drg: #e08cbd;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0e1513; --surface: #151f1d; --sunk: #0a100f; --ink: #e1ebe8; --muted: #8fa29e; --line: #2a3835;
+  --accent: #4cc2a8; --accent-ink: #06231d; --accent-soft: #173a33;
+  --ok: #6cc477; --warn: #e3a64a; --err: #f07a70; --info: #7fb0ee;
+  --k-tenancy: #a993f0; --k-comp: #4cc2a8; --k-vcn: #7fb0ee; --k-subnet: #8fc3dc; --k-res: #d9b278; --k-drg: #e08cbd;
+  color-scheme: dark }
+
+html, body { background: var(--bg); color: var(--ink); }
+body { font-family: var(--body); font-size: 15px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+* { box-sizing: border-box; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+h1, h2, h3 { font-family: var(--display); font-stretch: 85%; text-wrap: balance; line-height: 1.15; margin: 0; }
+h2 { font-size: 1.35rem; font-weight: 750; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding-block: 10px 6px; }
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+.brand h1 { font-size: 1.45rem; font-weight: 800; letter-spacing: -0.01em; }
+.brand small { color: var(--muted); font-size: 0.8rem; }
+.score { font-family: var(--mono); font-size: 0.8rem; padding: 3px 9px; border-radius: 99px; background: var(--accent-soft); color: var(--ink); white-space: nowrap; border: 0; cursor: pointer; }
+.tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+select, input[type=text], input[type=number], textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; min-width: 0; }
+textarea { font-family: var(--mono); font-size: 0.82rem; width: 100%; resize: vertical; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 5px 10px; cursor: pointer; white-space: nowrap; }
+.btn:hover { border-color: var(--accent); }
+a.btn { text-decoration: none; color: inherit; display: inline-block; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.small { padding: 2px 8px; font-size: 0.82rem; }
+.btn.danger { color: var(--err); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+nav.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+nav.tabs button { border: 0; background: none; padding: 8px 12px 9px; cursor: pointer; color: var(--muted); font-weight: 600; border-bottom: 3px solid transparent; white-space: nowrap; }
+nav.tabs button[aria-selected=true] { color: var(--ink); border-bottom-color: var(--accent); }
+
+main { padding-block: 16px 48px; display: grid; gap: 16px; }
+.panel { display: none; min-width: 0; }
+body[data-tab=build] #p-build, body[data-tab=diagram] #p-diagram, body[data-tab=review] #p-review,
+body[data-tab=missions] #p-missions, body[data-tab=learn] #p-learn, body[data-tab=rosetta] #p-rosetta, body[data-tab=tradeoffs] #p-tradeoffs, body[data-tab=terraform] #p-terraform, body[data-tab=links] #p-links { display: block; }
+.linklist { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.linklist li { display: grid; gap: 1px; font-size: 0.9rem; }
+.linklist a, #dir a { color: var(--accent); font-weight: 600; text-underline-offset: 2px; }
+.linklist span { color: var(--muted); font-size: 0.82rem; }
+.opts { border-collapse: collapse; font-size: 0.86rem; min-width: 640px; width: 100%; }
+.opts th, .opts td { border-bottom: 1px solid var(--line); padding: 7px 8px; text-align: left; vertical-align: top; }
+.opts th { font-family: var(--display); font-stretch: 85%; font-size: 0.92rem; }
+.opts td:first-child { font-weight: 600; }
+.verdict { border-left: 3px solid var(--accent); padding: 6px 10px; font-size: 0.9rem; }
+.scope { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
+.scope div { background: var(--sunk); border-radius: 8px; padding: 10px; display: grid; gap: 4px; font-size: 0.86rem; align-content: start; }
+.lat { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); align-items: end; }
+.lat output { font-family: var(--mono); font-size: 1.4rem; font-weight: 600; }
+.tradeoffs-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 560px), 1fr)); align-items: start; }
+@media (min-width: 1000px) {
+  body[data-tab=build] main { grid-template-columns: minmax(360px, 440px) minmax(0, 1fr); align-items: start; }
+  body[data-tab=build] #p-diagram { display: block; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 96px); }
+  body[data-tab=build] #p-diagram .diagram-box { max-height: calc(100vh - 200px); }
+}
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+.stack { display: grid; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.muted { color: var(--muted); }
+.eyebrow { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+/* tree */
+.notes { border-left: 3px solid var(--accent); padding: 8px 12px; background: var(--accent-soft); border-radius: 0 8px 8px 0; font-size: 0.92rem; }
+.tree { display: grid; gap: 1px; }
+.node { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; }
+.node:hover { background: var(--sunk); }
+.node.sel { border-color: var(--accent); background: var(--accent-soft); }
+.node .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.node .meta { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+.chip { font-family: var(--mono); font-size: 0.66rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 1px 6px; border-radius: 4px; border: 1px solid currentColor; }
+.k-tenancy { color: var(--k-tenancy); } .k-comp { color: var(--k-comp); } .k-vcn { color: var(--k-vcn); }
+.k-subnet { color: var(--k-subnet); } .k-res { color: var(--k-res); } .k-drg { color: var(--k-drg); }
+.actions { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 8px 8px; }
+.sevdot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.sev-error { background: var(--err); } .sev-warn { background: var(--warn); } .sev-info { background: var(--info); }
+
+/* inspector */
+.fields { display: grid; gap: 10px; }
+.field { display: grid; gap: 3px; }
+.field > label, .field > .lbl { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.field .help { font-size: 0.78rem; color: var(--muted); }
+.checks { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.checks label { display: flex; gap: 5px; align-items: center; font-size: 0.88rem; }
+.explain { font-size: 0.88rem; display: grid; gap: 6px; }
+.explain .par { font-size: 0.82rem; color: var(--muted); }
+.eff { font-family: var(--mono); font-size: 0.76rem; display: grid; gap: 4px; }
+.eff div { padding: 4px 6px; background: var(--sunk); border-radius: 4px; overflow-wrap: anywhere; }
+.eff span { color: var(--muted); }
+
+/* diagram */
+.diagram-box { overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 10px; min-height: 260px; }
+.diagram-box svg { display: block; margin: 0 auto; }
+/* ondine draws with these custom properties, so its SVG follows the page theme */
+.diagram-box, .learn .mm { --ondine-bg: transparent; --ondine-fg: var(--ink); --ondine-muted: var(--muted); --ondine-line: var(--muted); --ondine-border: var(--line); --ondine-stroke: var(--muted); --ondine-accent: var(--accent); --ondine-surface: var(--surface); --ondine-surface-alt: var(--sunk); --ondine-font: var(--body); }
+.diagram-box.fit svg { max-width: 100% !important; height: auto; }
+.diagram-box.actual svg { max-width: none !important; }
+.err-box { color: var(--err); font-family: var(--mono); font-size: 0.8rem; white-space: pre-wrap; }
+details > summary { cursor: pointer; font-weight: 600; }
+pre.src { font-family: var(--mono); font-size: 0.74rem; background: var(--sunk); padding: 10px; border-radius: 8px; overflow: auto; max-height: 340px; margin: 0; }
+
+/* review */
+.lint { display: grid; gap: 6px; }
+.lint-item { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: baseline; padding: 8px 10px; border-radius: 8px; background: var(--sunk); cursor: pointer; }
+.lint-item .why { grid-column: 2; font-size: 0.82rem; color: var(--muted); }
+.lint-item b { font-weight: 600; }
+.fin { width: 100%; border-collapse: collapse; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+.fin th, .fin td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.fin td.num, .fin th.num { text-align: right; font-family: var(--mono); font-size: 0.8rem; }
+.meter { height: 8px; background: var(--sunk); border-radius: 4px; overflow: hidden; min-width: 70px; }
+.meter > i { display: block; height: 100%; background: var(--ok); }
+.meter.over > i { background: var(--err); }
+.meter.hot > i { background: var(--warn); }
+.scroll-x { overflow-x: auto; }
+.free { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.free div { background: var(--sunk); border-radius: 8px; padding: 8px 10px; display: grid; gap: 4px; font-size: 0.82rem; }
+.free b { font-family: var(--mono); font-size: 0.95rem; }
+
+/* missions */
+.missions { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.mission { display: grid; gap: 6px; border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--surface); }
+.mission.done { border-color: var(--ok); }
+.mission .st { font-family: var(--mono); font-size: 0.75rem; }
+.mission.done .st { color: var(--ok); }
+
+/* learn */
+.learn { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr)); align-items: start; }
+.learn article { display: grid; gap: 8px; }
+.learn article p, .learn article li { font-size: 0.93rem; max-width: 68ch; }
+.learn ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.learn .mm { overflow-x: auto; background: var(--sunk); border-radius: 8px; padding: 8px; }
+.learn .mm svg { max-width: 100%; height: auto; }
+table.ros { border-collapse: collapse; font-size: 0.85rem; min-width: 860px; }
+table.ros th, table.ros td { border-bottom: 1px solid var(--line); padding: 7px 8px; text-align: left; vertical-align: top; }
+table.ros th { position: sticky; top: 0; background: var(--surface); font-family: var(--display); font-stretch: 85%; font-size: 0.95rem; }
+table.ros td:first-child { font-weight: 600; color: var(--accent); }
+table.ros td.note { color: var(--muted); font-size: 0.8rem; max-width: 280px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); border-radius: 8px; padding: 8px 12px; display: flex; gap: 10px; align-items: center; z-index: 20; font-size: 0.9rem; max-width: calc(100% - 32px); }
+.toast button { background: none; border: 1px solid var(--bg); color: var(--bg); border-radius: 5px; padding: 1px 8px; cursor: pointer; }
+.toast[hidden] { display: none; }
+@media (max-width: 700px) {
+  header.top { position: static; }
+  .brand small { display: none; }
+  .node { grid-template-columns: auto 1fr; }
+  .node .meta { grid-column: 2; white-space: normal; }
+}
+@media (prefers-reduced-motion: no-preference) { .node, .btn { transition: background 0.12s, border-color 0.12s; } }
+</style>
+
+<header class="top">
+  <div class="wrap bar">
+    <div class="brand"><h1>OCI Tenancy Atlas</h1><small>tenancies · compartments · VCNs · policies · spend</small></div>
+    <div class="tools">
+      <select id="preset" aria-label="Template"></select>
+      <button class="btn" id="loadPreset">Load</button>
+      <button class="btn" id="undo" disabled>Undo</button>
+      <button class="score" id="score" title="Open the review">Review</button>
+    </div>
+  </div>
+  <nav class="wrap tabs" role="tablist" id="tabs"></nav>
+</header>
+
+<main class="wrap">
+  <section class="panel" id="p-build">
+    <div class="stack">
+      <div class="notes" id="notes" hidden></div>
+      <div class="card">
+        <div class="row"><h2 style="margin-right:auto">Outline</h2><button class="btn small" id="addTenancy">+ Tenancy</button></div>
+        <div class="tree" id="tree" role="tree"></div>
+      </div>
+      <div class="card" id="inspector"></div>
+      <div class="card">
+        <details>
+          <summary>Save, share, restore</summary>
+          <div class="stack" style="margin-top:10px">
+            <p class="muted" style="font-size:.85rem">Your design autosaves in this browser. Copy the JSON to keep it elsewhere, or paste one back and press Import.</p>
+            <textarea id="json" rows="6" spellcheck="false" aria-label="Design JSON"></textarea>
+            <div class="row"><button class="btn small" id="copyJson">Copy current JSON</button><button class="btn small" id="importJson">Import pasted JSON</button><button class="btn small" id="blank">Start blank</button></div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-diagram">
+    <div class="stack">
+      <div class="row">
+        <h2 style="margin-right:auto">Diagram</h2>
+        <div class="row" role="group" aria-label="View">
+          <button class="btn small" data-view="logical">Logical</button>
+          <button class="btn small" data-view="physical">Physical</button>
+        </div>
+        <div class="row" role="group" aria-label="Renderer">
+          <button class="btn small" data-renderer="ondine">Ondine</button>
+          <button class="btn small" data-renderer="flow">Mermaid flowchart</button>
+          <button class="btn small" data-renderer="arch">Mermaid architecture</button>
+        </div>
+        <button class="btn small" id="fit">Actual size</button>
+        <button class="btn small" id="copyMm">Copy Mermaid</button>
+        <a class="btn small" id="ondine" href="https://ondine.sh/" target="_blank" rel="noopener">Open in ondine.sh</a>
+      </div>
+      <p class="muted" id="viewHelp" style="font-size:.85rem"></p>
+      <div class="diagram-box fit" id="diagram"></div>
+      <details><summary>Mermaid source</summary><pre class="src" id="mmsrc"></pre></details>
+    </div>
+  </section>
+
+  <section class="panel" id="p-review">
+    <div class="stack">
+      <div class="card"><h2>Architecture review</h2><p class="muted" style="font-size:.88rem">Each finding links to the node. Errors are things OCI would reject or that break traffic; warnings are design smells; info is context.</p><div class="lint" id="lint"></div></div>
+      <div class="card"><h2>FinOps</h2><div id="finops" class="stack"></div></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-missions">
+    <div class="stack">
+      <p class="muted">Missions check the live design. Load a template and modify it, or build from blank. Points add up in the header.</p>
+      <div class="missions" id="missions"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-learn"><div class="learn" id="learn"></div></section>
+  <section class="panel" id="p-terraform">
+    <div class="card">
+      <div class="row"><h2 style="margin-right:auto">Terraform</h2><button class="btn small primary" id="copyTf">Copy main.tf</button></div>
+      <p class="muted" style="font-size:.88rem">Generated from the live design with the <span class="mono">oracle/oci</span> provider: compartments, groups, policies, quotas, budgets, VCNs, gateways, route tables, subnets, DRGs and resources. Policies come from the design; use <b>Generate policies</b> on a tenancy to have them written for you. Treat this as a reviewed starting point: run <span class="mono">terraform plan</span> before applying, and set the variables it asks for (tenancy OCIDs, image OCIDs, SSH key, passwords).</p>
+      <p class="mono muted" style="font-size:.78rem" id="tfstats"></p>
+      <pre class="src" id="tfsrc" style="max-height:70vh"></pre>
+    </div>
+  </section>
+  <section class="panel" id="p-links">
+    <div class="stack">
+      <div class="card"><h2>Directory</h2><p class="muted" style="font-size:.88rem">Every OCI term used in this atlas, in one line each, with the doc to read next.</p>
+        <input type="text" id="dirFilter" placeholder="Filter terms, e.g. gateway" aria-label="Filter directory" style="max-width:320px">
+        <div class="scroll-x"><table class="opts" id="dir"></table></div></div>
+      <div class="tradeoffs-grid" id="links"></div>
+    </div>
+  </section>
+  <section class="panel" id="p-tradeoffs"><div class="stack" id="tradeoffs"></div></section>
+  <section class="panel" id="p-rosetta"><div class="card"><h2>Rosetta: OCI next to what you know</h2><div class="scroll-x" id="rosetta"></div></div></section>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ---------- reference data ----------
+const REGIONS = ['il-jerusalem-1','eu-frankfurt-1','eu-amsterdam-1','eu-marseille-1','uk-london-1','us-ashburn-1','us-phoenix-1','us-sanjose-1','ap-tokyo-1','ap-singapore-1'];
+// shortcut: rough monthly list prices (730 h) for teaching, not quotes; check oracle.com/cloud/price-list before decisions
+const RTYPES = {
+  a1:      { label: 'Compute A1.Flex (Arm)', icon: 'server', subnet: true, fields: ['ocpu','mem'] },
+  micro:   { label: 'Compute E2.1.Micro (free)', icon: 'server', subnet: true, fields: [] },
+  x86:     { label: 'Compute E5.Flex (x86)', icon: 'server', subnet: true, fields: ['ocpu','mem'] },
+  gpu:     { label: 'GPU VM A10', icon: 'server', subnet: true, fields: [] },
+  oke:     { label: 'OKE cluster (A1 workers)', icon: 'cloud', subnet: true, fields: ['ocpu','mem','enhanced'] },
+  lb:      { label: 'Flexible Load Balancer', icon: 'internet', subnet: true, fields: [] },
+  nlb:     { label: 'Network Load Balancer', icon: 'internet', subnet: true, fields: [] },
+  firewall:{ label: 'Network Firewall', icon: 'internet', subnet: true, fields: [] },
+  bastion: { label: 'Bastion service', icon: 'server', subnet: true, fields: [] },
+  adb:     { label: 'Autonomous Database', icon: 'database', subnet: 'optional', fields: ['alwaysFree'] },
+  pg:      { label: 'PostgreSQL DB system', icon: 'database', subnet: true, fields: [] },
+  bucket:  { label: 'Object Storage bucket', icon: 'disk', subnet: false, fields: ['size'] },
+  vault:   { label: 'Vault (keys + secrets)', icon: 'disk', subnet: false, fields: [] },
+  exa:     { label: 'Exadata Database Service', icon: 'database', subnet: true, fields: [] },
+  nva:     { label: 'Third-party firewall VM (Marketplace)', icon: 'internet', subnet: true, fields: [] },
+};
+const DB_TYPES = new Set(['adb','pg','exa']);
+
+const KIND = {
+  tenancy: { chip: 'tenancy', title: 'Tenancy',
+    what: 'Your OCI account. It owns an identity domain (users, groups), service limits, subscribed regions, and the root compartment that everything else nests under.',
+    par: 'AWS: an account. GCP: roughly an organization node with its billing account. Azure: an Entra tenant plus subscription. OpenShift: a whole cluster.' },
+  comp: { chip: 'comp', title: 'Compartment',
+    what: 'A global, logical folder for resources. Policies attached here flow down to every child compartment; costs roll up here; budgets and quotas target it. Up to six levels deep.',
+    par: 'AWS has no exact match: imagine an OU that can hold resources directly, or tag-scoped IAM. GCP: folder or project. Azure: resource group (plus management groups). OpenShift: a project / namespace.' },
+  vcn: { chip: 'vcn', title: 'Virtual Cloud Network',
+    what: 'A regional private network with one or more CIDR blocks (/16 to /30). Holds subnets, route tables, security lists, and gateways. Lives in one compartment, spans every availability domain in its region.',
+    par: 'AWS: VPC. GCP: VPC (but GCP VPCs are global). Azure: VNet. OpenShift: the cluster network.' },
+  subnet: { chip: 'subnet', title: 'Subnet',
+    what: 'Regional by default, so one subnet spans all ADs. Public subnets allow public IPs on VNICs; private ones forbid them. Each subnet gets a route table and security lists; NSGs attach per VNIC.',
+    par: 'AWS subnets are pinned to one AZ; OCI regional subnets are not. GCP subnets are regional, like OCI.' },
+  drg: { chip: 'drg', title: 'Dynamic Routing Gateway',
+    what: 'Regional virtual router. Attach VCNs, IPSec VPN, FastConnect, and remote peering connections to other regions. The hub in hub-and-spoke.',
+    par: 'AWS: Transit Gateway (plus VGW). GCP: Cloud Router with Network Connectivity Center. Azure: Virtual WAN hub or VNet gateway.' },
+  res: { chip: 'res', title: 'Resource',
+    what: 'Anything billable. Network-attached resources live in a subnet but can belong to a different compartment than the subnet: a classic pattern is subnets in a network compartment and instances in an app compartment.',
+    par: 'Same idea as an EC2 instance in a shared VPC subnet owned by another AWS account (VPC sharing).' },
+};
+
+// ---------- state ----------
+let S, undoStack = [], view = 'logical', renderer = 'ondine', fit = true, selected = null, tab = 'build';
+const LS = 'oci-atlas-v1';
+const nodes = () => S.nodes;
+const byId = id => S.nodes.find(n => n.id === id);
+const kidsOf = (id, kind) => S.nodes.filter(n => n.parent === id && (!kind || n.kind === kind));
+const tenancies = () => S.nodes.filter(n => n.kind === 'tenancy');
+function ancestors(n) { const a = []; let p = n && byId(n.parent); while (p) { a.unshift(p); p = byId(p.parent); } return a; }
+function tenancyOf(n) { return n.kind === 'tenancy' ? n : ancestors(n)[0]; }
+function nearestComp(n) { // tenancy counts as the root compartment
+  if (n.kind === 'comp' || n.kind === 'tenancy') return n;
+  return [...ancestors(n)].reverse().find(a => a.kind === 'comp' || a.kind === 'tenancy');
+}
+function ownerComp(n) { const o = n.kind === 'res' && n.comp && byId(n.comp); return o || nearestComp(n); }
+function vcnOf(n) { return n.kind === 'vcn' ? n : ancestors(n).find(a => a.kind === 'vcn'); }
+function regionOf(n) {
+  if (n.kind === 'vcn' || n.kind === 'drg') return n.region;
+  const v = vcnOf(n); if (v) return v.region;
+  return n.region || tenancyOf(n).home;
+}
+function compDepth(n) { return ancestors(n).filter(a => a.kind === 'comp').length + 1; }
+function compPath(n) { return [...ancestors(n), n].filter(a => a.kind === 'comp').map(a => a.name).join(':'); }
+function descendants(id) { const out = []; const walk = i => kidsOf(i).forEach(k => { out.push(k); walk(k.id); }); walk(id); return out; }
+
+function mk(kind, parent, props = {}) {
+  const id = 'n' + (++S.seq);
+  const base = { id, kind, parent: parent || null, name: kind };
+  const defaults = {
+    tenancy: { name: 'my-tenancy', home: 'il-jerusalem-1', regions: ['il-jerusalem-1'], orgParent: '', groups: 'Administrators', policies: 'Allow group Administrators to manage all-resources in tenancy', budget: '', quotas: '', tags: '', gov: '' },
+    comp: { name: 'new-compartment', policies: '', budget: '', quotas: '', tags: '' },
+    vcn: { name: 'vcn', cidr: '10.0.0.0/16', region: '', igw: false, nat: false, sgw: false, drg: '' },
+    subnet: { name: 'subnet', cidr: '10.0.0.0/24', public: false },
+    drg: { name: 'drg', region: '', onprem: false },
+    res: { name: 'resource', type: 'a1', ocpu: 1, mem: 6, size: 10, enhanced: false, alwaysFree: true, comp: '', region: '' },
+  }[kind];
+  const n = Object.assign(base, structuredClone(defaults), props);
+  S.nodes.push(n);
+  if ((kind === 'vcn' || kind === 'drg') && !n.region) n.region = tenancyOf(n).home;
+  return id;
+}
+function blankState() { return { seq: 0, nodes: [], notes: '', title: '' }; }
+
+// ---------- presets ----------
+const PRESETS = {
+  solo: { title: 'Solo hacker on Always Free', build() {
+    const t = mk('tenancy', null, { name: 'solo-free', budget: 1,
+      quotas: 'zero compute-core quotas in tenancy\nset compute-core quota standard-a1-core-count to 2 in tenancy',
+      tags: 'Owner=me' });
+    const c = mk('comp', t, { name: 'homelab' });
+    const v = mk('vcn', c, { name: 'lab-vcn', cidr: '10.0.0.0/16', igw: true });
+    const s = mk('subnet', v, { name: 'public', cidr: '10.0.0.0/24', public: true });
+    mk('res', s, { name: 'k3s-node', type: 'a1', ocpu: 2, mem: 12 });
+    mk('res', c, { name: 'backups', type: 'bucket', size: 15 });
+    return 'One tenancy, one working compartment, nothing in the root. The A1 node sits in a public subnet behind an Internet Gateway, with the security list open only for SSH and HTTPS. The $1 budget on the tenancy is a tripwire, and the quotas make it impossible to launch anything except 2 A1 cores. Since June 2026 the Always Free Arm allowance is 2 OCPU and 12 GB in total, in your home region only. AWS mental model: a single account with one VPC, except the compartment is the thing you delete to clean up.';
+  }},
+  partner: { title: 'Two people, two tenancies', build() {
+    const a = mk('tenancy', null, { name: 'michael', groups: 'Administrators, Collaborators', budget: 20,
+      policies: 'Allow group Administrators to manage all-resources in tenancy\nAllow group Collaborators to use instance-family in compartment shared-project\nDefine tenancy PartnerCo as ocid1.tenancy.oc1..partner\nAdmit group PartnerDevs of tenancy PartnerCo to manage objects in compartment shared-project' });
+    const sp = mk('comp', a, { name: 'shared-project', budget: 15, tags: 'Project=joint' });
+    const v = mk('vcn', sp, { name: 'shared-vcn', cidr: '10.10.0.0/16', igw: true, nat: true });
+    const pub = mk('subnet', v, { name: 'public', cidr: '10.10.0.0/24', public: true });
+    mk('res', pub, { name: 'jump', type: 'bastion' });
+    const prv = mk('subnet', v, { name: 'private', cidr: '10.10.1.0/24' });
+    mk('res', prv, { name: 'app', type: 'a1', ocpu: 2, mem: 12 });
+    mk('res', sp, { name: 'handoff', type: 'bucket', size: 5 });
+    const b = mk('tenancy', null, { name: 'partnerco', home: 'eu-frankfurt-1', regions: ['eu-frankfurt-1'], groups: 'Administrators, PartnerDevs', budget: 20,
+      policies: 'Allow group Administrators to manage all-resources in tenancy\nDefine tenancy Michael as ocid1.tenancy.oc1..michael\nEndorse group PartnerDevs to manage objects in tenancy Michael' });
+    const d = mk('comp', b, { name: 'dev' });
+    const v2 = mk('vcn', d, { name: 'partner-vcn', cidr: '10.20.0.0/16', igw: true });
+    const s2 = mk('subnet', v2, { name: 'public', cidr: '10.20.0.0/24', public: true });
+    mk('res', s2, { name: 'workstation', type: 'micro' });
+    return 'Collaborating without merging accounts. Inside your tenancy, a Collaborators group gets narrow rights on one compartment. For the partner\'s own users, cross-tenancy policy needs both sides: they Endorse their group to act in your tenancy, you Define their tenancy and Admit that group into one compartment. AWS mental model: a cross-account role, where the trust policy and the caller\'s permission must both exist. Note the bastion: no public IPs needed on the app node.';
+  }},
+  team: { title: 'Small team, one tenancy', build() {
+    const t = mk('tenancy', null, { name: 'team', groups: 'Administrators, NetworkAdmins, Developers, Auditors', budget: 300, tags: 'CostCenter=platform',
+      policies: [
+        'Allow group Administrators to manage all-resources in tenancy',
+        'Allow group NetworkAdmins to manage virtual-network-family in compartment network',
+        'Allow group Developers to use virtual-network-family in compartment network',
+        'Allow group Developers to manage instance-family in compartment dev',
+        'Allow group Developers to read all-resources in compartment prod',
+        'Allow group Auditors to inspect all-resources in tenancy'].join('\n') });
+    const net = mk('comp', t, { name: 'network' });
+    const dev = mk('comp', t, { name: 'dev', budget: 40, quotas: 'set compute-core quota standard-a1-core-count to 4 in compartment dev' });
+    const prod = mk('comp', t, { name: 'prod', budget: 200 });
+    const sh = mk('comp', t, { name: 'shared' });
+    const dv = mk('vcn', net, { name: 'dev-vcn', cidr: '10.1.0.0/16', igw: true, nat: true });
+    const dpub = mk('subnet', dv, { name: 'public', cidr: '10.1.0.0/24', public: true });
+    mk('res', dpub, { name: 'dev-lb', type: 'lb', comp: dev });
+    const dprv = mk('subnet', dv, { name: 'app', cidr: '10.1.1.0/24' });
+    mk('res', dprv, { name: 'dev-app', type: 'a1', ocpu: 2, mem: 12, comp: dev });
+    const pv = mk('vcn', net, { name: 'prod-vcn', cidr: '10.2.0.0/16', igw: true, nat: true, sgw: true });
+    const ppub = mk('subnet', pv, { name: 'public', cidr: '10.2.0.0/24', public: true });
+    mk('res', ppub, { name: 'prod-lb', type: 'lb', comp: prod });
+    const papp = mk('subnet', pv, { name: 'app', cidr: '10.2.1.0/24' });
+    mk('res', papp, { name: 'prod-app', type: 'a1', ocpu: 4, mem: 24, comp: prod });
+    const pdb = mk('subnet', pv, { name: 'data', cidr: '10.2.2.0/24' });
+    mk('res', pdb, { name: 'prod-pg', type: 'pg', comp: prod });
+    mk('res', sh, { name: 'artifacts', type: 'bucket', size: 60 });
+    mk('res', sh, { name: 'secrets', type: 'vault' });
+    return 'The classic single-tenancy split: a network compartment owned by NetworkAdmins, environment compartments owned by Developers, and a shared compartment for buckets and vaults. Instances sit in subnets from the network compartment but belong to dev or prod, so their cost and IAM land there. Open any compartment to see which policy lines apply to it. AWS mental model: a VPC shared from a network account into workload accounts, but without the account sprawl.';
+  }},
+  startup: { title: 'Startup with prod, staging and DR', build() {
+    const t = mk('tenancy', null, { name: 'startup', home: 'eu-frankfurt-1', regions: ['eu-frankfurt-1','eu-amsterdam-1'],
+      groups: 'Administrators, NetworkAdmins, SecurityAdmins, Engineers', budget: 3000,
+      tags: 'Ops.CostCenter (defined, required)\nOps.Environment (defined, required)',
+      policies: [
+        'Allow group Administrators to manage all-resources in tenancy',
+        'Allow group NetworkAdmins to manage virtual-network-family in compartment network',
+        'Allow group NetworkAdmins to manage drgs in compartment network',
+        'Allow group SecurityAdmins to manage vaults in compartment security',
+        'Allow group Engineers to manage cluster-family in compartment prod',
+        'Allow group Engineers to manage all-resources in compartment staging',
+        'Allow any-user to read secret-family in compartment security where all {request.principal.type = \'workload\', request.principal.namespace = \'api\', request.principal.service_account = \'api\'}'].join('\n') });
+    const net = mk('comp', t, { name: 'network' });
+    const prod = mk('comp', t, { name: 'prod', budget: 2200 });
+    const papp = mk('comp', prod, { name: 'prod-app' });
+    const pdata = mk('comp', prod, { name: 'prod-data' });
+    const stg = mk('comp', t, { name: 'staging', budget: 150, quotas: 'zero gpu-family quotas in compartment staging' });
+    const sec = mk('comp', t, { name: 'security' });
+    const drg = mk('drg', net, { name: 'hub-drg', region: 'eu-frankfurt-1', onprem: true });
+    const pv = mk('vcn', net, { name: 'prod-vcn', cidr: '10.0.0.0/16', igw: true, nat: true, sgw: true, drg });
+    const pub = mk('subnet', pv, { name: 'public-lb', cidr: '10.0.0.0/24', public: true });
+    mk('res', pub, { name: 'api-lb', type: 'lb', comp: papp });
+    const app = mk('subnet', pv, { name: 'app', cidr: '10.0.1.0/24' });
+    mk('res', app, { name: 'prod-oke', type: 'oke', ocpu: 8, mem: 48, enhanced: true, comp: papp });
+    const dat = mk('subnet', pv, { name: 'data', cidr: '10.0.2.0/24' });
+    mk('res', dat, { name: 'prod-adb', type: 'adb', alwaysFree: false, comp: pdata });
+    const sv = mk('vcn', net, { name: 'staging-vcn', cidr: '10.1.0.0/16', igw: true, nat: true, drg });
+    const spub = mk('subnet', sv, { name: 'public-lb', cidr: '10.1.0.0/24', public: true });
+    mk('res', spub, { name: 'stg-lb', type: 'lb', comp: stg });
+    const sapp = mk('subnet', sv, { name: 'app', cidr: '10.1.1.0/24' });
+    mk('res', sapp, { name: 'stg-oke', type: 'oke', ocpu: 2, mem: 12, comp: stg });
+    const drgdr = mk('drg', net, { name: 'dr-drg', region: 'eu-amsterdam-1' });
+    const dv = mk('vcn', net, { name: 'dr-vcn', cidr: '10.2.0.0/16', region: 'eu-amsterdam-1', sgw: true, drg: drgdr });
+    const ddat = mk('subnet', dv, { name: 'data', cidr: '10.2.2.0/24' });
+    mk('res', ddat, { name: 'adb-standby', type: 'adb', alwaysFree: false, comp: pdata });
+    mk('res', sec, { name: 'app-vault', type: 'vault' });
+    mk('res', sec, { name: 'audit-logs', type: 'bucket', size: 200 });
+    return 'Prod and staging in separate compartments, prod split into app and data children so the data team can be scoped tightly. A hub DRG connects both VCNs and a site-to-site VPN; a second DRG in Amsterdam holds the DR standby (the two DRGs would be linked by a remote peering connection). The last policy line is OKE workload identity: pods in namespace api with service account api read secrets with no API keys stored anywhere, the same idea as IRSA on EKS.';
+  }},
+  enterprise: { title: 'Enterprise organization with landing zones', build() {
+    const p = mk('tenancy', null, { name: 'acme-parent', home: 'us-ashburn-1', regions: ['us-ashburn-1','us-phoenix-1','eu-frankfurt-1'],
+      groups: 'Administrators, OrgAdmins, FinOps', budget: 60000,
+      policies: 'Allow group Administrators to manage all-resources in tenancy\nAllow group FinOps to read usage-reports in tenancy\nAllow group OrgAdmins to manage organizations-family in tenancy',
+      gov: 'Allowed regions rule: us-ashburn-1, us-phoenix-1 (locked in children)\nTag rule: namespace Acme with CostCenter and Owner\nQuota rule: zero gpu-family quotas in sandbox' });
+    const gov = mk('comp', p, { name: 'governance' });
+    mk('res', gov, { name: 'org-audit-archive', type: 'bucket', size: 500 });
+
+    const prod = mk('tenancy', null, { name: 'acme-prod', home: 'us-ashburn-1', regions: ['us-ashburn-1','us-phoenix-1'], orgParent: p,
+      groups: 'Administrators, lz-network-admins, lz-security-admins, lz-app-admins, lz-database-admins', budget: 45000,
+      policies: [
+        'Allow group Administrators to manage all-resources in tenancy',
+        'Allow group lz-network-admins to manage virtual-network-family in compartment acme-lz:network',
+        'Allow group lz-security-admins to manage vaults in compartment acme-lz:security',
+        'Allow group lz-app-admins to manage cluster-family in compartment acme-lz:app',
+        'Allow group lz-database-admins to manage autonomous-database-family in compartment acme-lz:database'].join('\n') });
+    const lz = mk('comp', prod, { name: 'acme-lz' });
+    const net = mk('comp', lz, { name: 'network' });
+    const sec = mk('comp', lz, { name: 'security' });
+    const app = mk('comp', lz, { name: 'app', budget: 30000 });
+    const db = mk('comp', lz, { name: 'database', budget: 12000 });
+    const hub = mk('drg', net, { name: 'iad-hub-drg', region: 'us-ashburn-1', onprem: true });
+    const hv = mk('vcn', net, { name: 'hub-vcn', cidr: '10.0.0.0/22', igw: true, nat: true, sgw: true, drg: hub });
+    const dmz = mk('subnet', hv, { name: 'dmz', cidr: '10.0.0.0/24', public: true });
+    mk('res', dmz, { name: 'edge-lb', type: 'lb', comp: app });
+    const fw = mk('subnet', hv, { name: 'firewall', cidr: '10.0.1.0/24' });
+    mk('res', fw, { name: 'nfw', type: 'firewall', comp: sec });
+    const av = mk('vcn', net, { name: 'app-spoke', cidr: '10.10.0.0/16', drg: hub });
+    const as = mk('subnet', av, { name: 'workers', cidr: '10.10.0.0/20' });
+    mk('res', as, { name: 'oke-prod', type: 'oke', ocpu: 32, mem: 256, enhanced: true, comp: app });
+    const ml = mk('subnet', av, { name: 'inference', cidr: '10.10.16.0/24' });
+    mk('res', ml, { name: 'llm-serving', type: 'gpu', comp: app });
+    const dv = mk('vcn', net, { name: 'db-spoke', cidr: '10.20.0.0/16', drg: hub });
+    const ds = mk('subnet', dv, { name: 'adb-pe', cidr: '10.20.0.0/24' });
+    mk('res', ds, { name: 'orders-adb', type: 'adb', alwaysFree: false, comp: db });
+    const phx = mk('drg', net, { name: 'phx-dr-drg', region: 'us-phoenix-1' });
+    const drv = mk('vcn', net, { name: 'dr-spoke', cidr: '10.110.0.0/16', region: 'us-phoenix-1', drg: phx });
+    const drs = mk('subnet', drv, { name: 'adb-pe', cidr: '10.110.0.0/24' });
+    mk('res', drs, { name: 'orders-adb-standby', type: 'adb', alwaysFree: false, comp: db });
+    mk('res', sec, { name: 'kms', type: 'vault' });
+
+    const np = mk('tenancy', null, { name: 'acme-nonprod', home: 'us-ashburn-1', regions: ['us-ashburn-1'], orgParent: p, groups: 'Administrators, Engineers', budget: 6000,
+      policies: 'Allow group Administrators to manage all-resources in tenancy\nAllow group Engineers to manage all-resources in compartment nonprod' });
+    const npc = mk('comp', np, { name: 'nonprod', budget: 5000 });
+    const npv = mk('vcn', npc, { name: 'nonprod-vcn', cidr: '10.50.0.0/16', igw: true, nat: true, sgw: true });
+    const nps = mk('subnet', npv, { name: 'app', cidr: '10.50.1.0/24' });
+    mk('res', nps, { name: 'oke-nonprod', type: 'oke', ocpu: 8, mem: 64, comp: npc });
+
+    const sb = mk('tenancy', null, { name: 'acme-sandbox', home: 'us-ashburn-1', regions: ['us-ashburn-1'], orgParent: p, groups: 'Administrators, Sandboxers', budget: 500,
+      policies: 'Allow group Administrators to manage all-resources in tenancy\nAllow group Sandboxers to manage all-resources in compartment sandboxes',
+      quotas: 'zero gpu-family quotas in tenancy' });
+    const sbs = mk('comp', sb, { name: 'sandboxes', quotas: 'set compute-core quota standard-a1-core-count to 8 in compartment sandboxes' });
+    const alice = mk('comp', sbs, { name: 'sbx-alice', budget: 50 });
+    mk('comp', sbs, { name: 'sbx-bob', budget: 50 });
+    const av2 = mk('vcn', alice, { name: 'alice-vcn', cidr: '10.200.0.0/24', igw: true });
+    const as2 = mk('subnet', av2, { name: 'pub', cidr: '10.200.0.0/26', public: true });
+    mk('res', as2, { name: 'scratch', type: 'a1', ocpu: 1, mem: 6 });
+    return 'An organization: the parent tenancy holds billing, FinOps and governance rules and runs almost nothing. Children are separate tenancies for hard isolation (own identity domain, limits, blast radius). Prod follows the CIS Landing Zone shape: one top compartment with network, security, app and database children, a hub VCN with a firewall, spokes on a DRG, and a DR spoke in Phoenix. AWS mental model: Organizations plus Control Tower, where child tenancies are member accounts and governance rules are locked SCP-like controls.';
+  }},
+  coreB: { title: 'Core Landing Zone, one-firewall hub (Hub B)', build() {
+    const t = mk('tenancy', null, { name: 'corp', home: 'eu-frankfurt-1', regions: ['eu-frankfurt-1'], budget: 40000,
+      groups: 'Administrators, lz-iam-admins, lz-cred-admins, lz-network-admins, lz-security-admins, lz-app-admins, lz-database-admins, lz-exainfra-admins, lz-auditors, lz-cost-admins',
+      tags: 'Oracle-Standard.CostCenter (defined, required)',
+      policies: lzPolicies('lz', ['exainfra']) });
+    const { net, sec, app, db, exa } = lzComps(t, 'lz', true);
+    const drg = mk('drg', net, { name: 'hub-drg', onprem: true });
+    const hub = mk('vcn', net, { name: 'hub', cidr: '10.0.0.0/22', igw: true, nat: true, sgw: true, drg });
+    sub(hub, 'dmz', '10.0.0.0/24', true, [['web-lb', 'lb', app]]);
+    sub(hub, 'firewall', '10.0.1.0/24', false, [['nfw', 'firewall', sec]]);
+    sub(hub, 'jump', '10.0.2.0/24', false, [['jump-bastion', 'bastion', sec]]);
+    spoke(net, 'three-tier', '10.10', drg, [['app', [['app-vm', 'x86', app, { ocpu: 4, mem: 32 }]]], ['db', [['app-pg', 'pg', db]]]]);
+    spoke(net, 'oke', '10.20', drg, [['workers', [['oke-prod', 'oke', app, { ocpu: 16, mem: 128 }]]]]);
+    spoke(net, 'exadata', '10.30', drg, [['client', [['exacs', 'exa', exa]]]]);
+    return 'Oracle\'s default starting point for most tenancies (the Core Landing Zone merges the earlier CIS and Enterprise landing zones). One top compartment holds network, security, app, database and optional exainfra children, each with its own admin group, so no one but Administrators can touch everything. The hub VCN has one OCI Network Firewall that inspects internet traffic and spoke-to-spoke traffic; spokes have no gateways of their own and route everything through the DRG to the hub. Tradeoff: one firewall is cheaper and simpler than two, but inbound and east-west traffic share its throughput and its rule base.';
+  }},
+  hubA: { title: 'Two-firewall hub for regulated traffic (Hub A)', build() {
+    const t = mk('tenancy', null, { name: 'bank', home: 'uk-london-1', regions: ['uk-london-1'], budget: 60000,
+      groups: 'Administrators, lz-network-admins, lz-security-admins, lz-app-admins, lz-database-admins, lz-auditors',
+      policies: lzPolicies('lz', []) + '\nAllow group lz-security-admins to manage network-firewall-family in compartment lz:security' });
+    const { net, sec, app, db } = lzComps(t, 'lz', false);
+    const drg = mk('drg', net, { name: 'hub-drg', region: 'uk-london-1', onprem: true });
+    const hub = mk('vcn', net, { name: 'hub', cidr: '10.0.0.0/21', region: 'uk-london-1', igw: true, nat: true, sgw: true, drg });
+    sub(hub, 'dmz-fw', '10.0.0.0/24', true, [['dmz-firewall', 'firewall', sec]]);
+    sub(hub, 'public-lb', '10.0.1.0/24', true, [['edge-lb', 'lb', app]]);
+    sub(hub, 'internal-fw', '10.0.2.0/24', false, [['internal-firewall', 'firewall', sec]]);
+    sub(hub, 'mgmt', '10.0.3.0/24', false, [['ops-bastion', 'bastion', sec]]);
+    sub(hub, 'monitoring', '10.0.4.0/24', false, [['log-collector', 'a1', sec, { ocpu: 2, mem: 12 }]]);
+    sub(hub, 'dns', '10.0.5.0/24', false, []);
+    spoke(net, 'prod', '10.10', drg, [['app', [['payments', 'oke', app, { ocpu: 24, mem: 192 }]]], ['db', [['ledger', 'adb', db, { alwaysFree: false }]]]], 'uk-london-1');
+    spoke(net, 'nonprod', '10.20', drg, [['app', [['payments-test', 'oke', app, { ocpu: 4, mem: 32 }]]]], 'uk-london-1');
+    return 'Hub A from Oracle\'s hub models: one firewall in the DMZ sees inbound traffic first (and can decrypt TLS before the load balancer), a second inspects outbound and spoke-to-spoke traffic. Separate subnets for management, monitoring and DNS resolver endpoints keep shared services in the hub. Tradeoff: about twice the firewall cost of Hub B, in exchange for segmented rule bases, more throughput, and seeing the real source of inbound traffic. Typical for banks and anything with audited ingress.';
+  }},
+  hubE: { title: 'Lean hub without a firewall (Hub E)', build() {
+    const t = mk('tenancy', null, { name: 'lean-corp', home: 'eu-amsterdam-1', regions: ['eu-amsterdam-1'], budget: 4000,
+      groups: 'Administrators, NetworkAdmins, AppAdmins',
+      policies: 'Allow group Administrators to manage all-resources in tenancy\nAllow group NetworkAdmins to manage virtual-network-family in compartment network\nAllow group NetworkAdmins to manage drgs in compartment network\nAllow group AppAdmins to manage all-resources in compartment apps\nAllow group AppAdmins to use virtual-network-family in compartment network' });
+    const net = mk('comp', t, { name: 'network' }), apps = mk('comp', t, { name: 'apps', budget: 3500 });
+    const drg = mk('drg', net, { name: 'hub-drg', region: 'eu-amsterdam-1' });
+    const hub = mk('vcn', net, { name: 'hub', cidr: '10.0.0.0/22', region: 'eu-amsterdam-1', igw: true, nat: true, sgw: true, drg });
+    sub(hub, 'public-lb', '10.0.0.0/24', true, [['shared-lb', 'lb', apps]]);
+    sub(hub, 'mgmt', '10.0.1.0/24', false, [['bastion', 'bastion', net]]);
+    spoke(net, 'prod', '10.10', drg, [['app', [['prod-oke', 'oke', apps, { ocpu: 8, mem: 48 }]]], ['db', [['prod-adb', 'adb', apps, { alwaysFree: false }]]]], 'eu-amsterdam-1');
+    spoke(net, 'dev', '10.20', drg, [['app', [['dev-oke', 'oke', apps, { ocpu: 2, mem: 12 }]]]], 'eu-amsterdam-1');
+    return 'Hub E: the same hub-and-spoke routing with no network firewall. Central NAT, service gateway and load balancer still live in the hub, so spokes stay gateway-free. Isolation comes from DRG route tables (spokes import only the hub route, never each other) plus NSGs on every VNIC. Tradeoff: saves roughly $2,000 a month per firewall and removes a throughput bottleneck, but there is no deep packet inspection or central threat log. A sound default for startups; add a firewall to the hub later without re-addressing anything.';
+  }},
+  multiOE: { title: 'Operating entities in one tenancy', build() {
+    const t = mk('tenancy', null, { name: 'holding-group', home: 'eu-frankfurt-1', regions: ['eu-frankfurt-1'], budget: 30000,
+      groups: 'Administrators, CT_OPS, OE01_OPS, OE02_OPS, Auditors',
+      tags: 'Org.OperatingEntity (defined, cost-tracking)\nOrg.Environment (defined)',
+      policies: [
+        'Allow group Administrators to manage all-resources in tenancy',
+        'Allow group CT_OPS to manage all-resources in compartment lz:shared',
+        'Allow group OE01_OPS to manage all-resources in compartment lz:oe01-retail',
+        'Allow group OE01_OPS to use virtual-network-family in compartment lz:shared:network',
+        'Allow group OE02_OPS to manage all-resources in compartment lz:oe02-logistics',
+        'Allow group OE02_OPS to use virtual-network-family in compartment lz:shared:network',
+        'Allow group Auditors to inspect all-resources in tenancy'].join('\n') });
+    const lz = mk('comp', t, { name: 'lz' });
+    const shared = mk('comp', lz, { name: 'shared' });
+    const net = mk('comp', shared, { name: 'network' }), sec = mk('comp', shared, { name: 'security' }), plat = mk('comp', shared, { name: 'platform' });
+    const oe1 = mk('comp', lz, { name: 'oe01-retail', budget: 15000 });
+    const oe1p = mk('comp', oe1, { name: 'prod' }), oe1pp = mk('comp', oe1, { name: 'preprod', budget: 2500 });
+    const shop = mk('comp', oe1p, { name: 'proj-webshop' });
+    mk('comp', oe1, { name: 'sandbox', budget: 200, quotas: 'zero gpu-family quotas in compartment sandbox' });
+    const oe2 = mk('comp', lz, { name: 'oe02-logistics', budget: 8000 });
+    const oe2p = mk('comp', oe2, { name: 'prod' });
+    const drg = mk('drg', net, { name: 'hub-drg', onprem: true });
+    const hub = mk('vcn', net, { name: 'hub', cidr: '10.0.0.0/22', igw: true, nat: true, sgw: true, drg });
+    sub(hub, 'dmz', '10.0.0.0/24', true, [['edge-lb', 'lb', plat]]);
+    sub(hub, 'firewall', '10.0.1.0/24', false, [['nfw', 'firewall', sec]]);
+    spoke(net, 'oe01-prod', '10.11', drg, [['app', [['webshop-oke', 'oke', shop, { ocpu: 12, mem: 96 }]]], ['db', [['webshop-adb', 'adb', shop, { alwaysFree: false }]]]]);
+    spoke(net, 'oe01-preprod', '10.12', drg, [['app', [['webshop-stg', 'oke', oe1pp, { ocpu: 4, mem: 32 }]]]]);
+    spoke(net, 'oe02-prod', '10.21', drg, [['app', [['tracking-vm', 'x86', oe2p, { ocpu: 8, mem: 64 }]]], ['db', [['tracking-pg', 'pg', oe2p]]]]);
+    mk('res', plat, { name: 'shared-ocir-images', type: 'bucket', size: 300 });
+    mk('res', sec, { name: 'group-vault', type: 'vault' });
+    return 'The shape of Oracle\'s Operating Entities Landing Zone (Multi-OE blueprint): a central team (CT_OPS) owns shared network, security and platform services, and each business unit (operating entity) gets its own subtree of environments and projects that its OE_OPS team runs. Spokes are owned centrally but resources inside them belong to the OE\'s project compartment, so each OE sees its own bill. Tradeoff vs separate tenancies: one identity domain and one set of limits for everyone, but far less cross-tenancy plumbing. Graduate an OE into its own tenancy only when it needs its own admins or legal separation.';
+  }},
+  saasPod: { title: 'SaaS provider, one stack per customer (pod)', build() {
+    const t = mk('tenancy', null, { name: 'saas-pods', home: 'eu-frankfurt-1', regions: ['eu-frankfurt-1'], budget: 20000,
+      groups: 'Administrators, NetworkAdmins, SecurityAdmins, SharedSvcAdmins, PodOperators',
+      policies: 'Allow group Administrators to manage all-resources in tenancy\nAllow group NetworkAdmins to manage virtual-network-family in compartment mgmt-plane:network\nAllow group SecurityAdmins to manage all-resources in compartment mgmt-plane:security\nAllow group PodOperators to manage all-resources in compartment customers' });
+    const mp = mk('comp', t, { name: 'mgmt-plane' });
+    const net = mk('comp', mp, { name: 'network' }), sec = mk('comp', mp, { name: 'security' }), sh = mk('comp', mp, { name: 'shared-services' });
+    const cust = mk('comp', t, { name: 'customers' });
+    const drg = mk('drg', net, { name: 'hub-drg' });
+    const hub = mk('vcn', net, { name: 'hub', cidr: '10.0.0.0/22', igw: true, nat: true, sgw: true, drg });
+    sub(hub, 'dmz', '10.0.0.0/24', true, [['ingress-lb', 'lb', sh]]);
+    sub(hub, 'firewall', '10.0.1.0/24', false, [['nfw', 'firewall', sec]]);
+    [['acme', '10.101', 6, 2500], ['globex', '10.102', 4, 1800], ['initech', '10.103', 2, 900]].forEach(([n, b, c, bud]) => {
+      const cc = mk('comp', cust, { name: 'cust-' + n, budget: bud, tags: 'Customer=' + n });
+      spoke(cc, n + '-vcn', b, drg, [['app', [[n + '-oke', 'oke', cc, { ocpu: c, mem: c * 8 }]]], ['db', [[n + '-adb', 'adb', cc, { alwaysFree: false }]]]]);
+    });
+    mk('res', sh, { name: 'observability', type: 'bucket', size: 400 });
+    return 'Oracle\'s service-provider blueprint, pod specialization: a shared management plane (hub network with firewall, security, observability, DevOps) and one dedicated compartment, VCN, cluster and database per customer. Per-customer cost is just the compartment rollup, and a noisy or breached customer cannot reach another. Tradeoff: you run N copies of everything, so upgrades and fixed costs scale with customers. Fits enterprise customers who demand isolation or custom versions. Watch the CIDR plan: every pod VCN on the DRG needs its own range.';
+  }},
+  saasShared: { title: 'SaaS provider, shared multi-tenant stack', build() {
+    const t = mk('tenancy', null, { name: 'saas-shared', home: 'us-ashburn-1', regions: ['us-ashburn-1', 'us-phoenix-1'], budget: 9000,
+      groups: 'Administrators, NetworkAdmins, Engineers, SRE',
+      tags: 'Billing.Tenant (cost-tracking; set on per-tenant buckets and queues)',
+      policies: 'Allow group Administrators to manage all-resources in tenancy\nAllow group NetworkAdmins to manage virtual-network-family in compartment mgmt-plane:network\nAllow group Engineers to manage all-resources in compartment app-lifecycle:dev\nAllow group SRE to manage all-resources in compartment app-lifecycle\nAllow any-user to manage objects in compartment app-lifecycle:prod where all {request.principal.type = \'workload\', request.principal.namespace = \'tenant-router\'}' });
+    const mp = mk('comp', t, { name: 'mgmt-plane' });
+    const net = mk('comp', mp, { name: 'network' }), sec = mk('comp', mp, { name: 'security' });
+    const al = mk('comp', t, { name: 'app-lifecycle' });
+    const dev = mk('comp', al, { name: 'dev', budget: 600 }), test = mk('comp', al, { name: 'test', budget: 900 }), prod = mk('comp', al, { name: 'prod', budget: 7000 });
+    [['dev', '10.1', dev, 2], ['test', '10.2', test, 4], ['prod', '10.3', prod, 16]].forEach(([n, b, c, cores]) => {
+      const v = mk('vcn', net, { name: n + '-vcn', cidr: b + '.0.0/16', igw: true, nat: true, sgw: true });
+      sub(v, 'public', b + '.0.0/24', true, [[n + '-lb', 'lb', c]]);
+      sub(v, 'app', b + '.1.0/24', false, [[n + '-oke', 'oke', c, { ocpu: cores, mem: cores * 8 }]]);
+      sub(v, 'data', b + '.2.0/24', false, [[n + '-adb', 'adb', c, { alwaysFree: n === 'dev' }]]);
+    });
+    const dr = mk('vcn', net, { name: 'prod-dr-vcn', cidr: '10.13.0.0/16', region: 'us-phoenix-1', sgw: true });
+    sub(dr, 'data', '10.13.2.0/24', false, [['prod-adb-standby', 'adb', prod, { alwaysFree: false }]]);
+    mk('res', sec, { name: 'tenant-keys', type: 'vault' });
+    mk('res', prod, { name: 'tenant-uploads', type: 'bucket', size: 2000 });
+    return 'The other service-provider specialization: one application stack per environment, shared by every customer, with tenant isolation enforced in the application (tenant IDs, row-level security, per-tenant keys in Vault). Far cheaper per customer and one upgrade covers everyone. Tradeoffs: a bug can leak across tenants, one noisy tenant affects all, and OCI cannot split the shared cluster\'s bill by customer, so per-tenant cost needs cost-tracking tags on what you can separate plus your own usage metering for the rest. Prod has a cross-region database standby because every customer shares its fate.';
+  }},
+  zeroTrust: { title: 'Zero Trust landing zone', build() {
+    const t = mk('tenancy', null, { name: 'zt-corp', home: 'eu-frankfurt-1', regions: ['eu-frankfurt-1'], budget: 35000,
+      groups: 'Administrators, lz-network-admins, lz-security-admins, lz-appdev-admins, lz-database-admins, SOC',
+      tags: 'ZPR security attributes: app:frontend, app:backend, data:restricted\nSecurity Zone recipe on lz:database (no public buckets, encryption with customer keys)',
+      policies: [
+        'Allow group Administrators to manage all-resources in tenancy',
+        'Allow group lz-network-admins to manage virtual-network-family in compartment lz:network',
+        'Allow group lz-security-admins to manage all-resources in compartment lz:security',
+        'Allow group lz-appdev-admins to manage cluster-family in compartment lz:appdev where request.networkSource.name = \'corp-ztna\'',
+        'Allow group lz-database-admins to manage autonomous-database-family in compartment lz:database where request.networkSource.name = \'corp-ztna\'',
+        'Allow group SOC to read all-resources in compartment lz:security'].join('\n') });
+    const lz = mk('comp', t, { name: 'lz' });
+    const net = mk('comp', lz, { name: 'network' }), sec = mk('comp', lz, { name: 'security' }), sh = mk('comp', lz, { name: 'shared' });
+    const db = mk('comp', lz, { name: 'database', budget: 9000 }), appdev = mk('comp', lz, { name: 'appdev', budget: 12000 });
+    const drg = mk('drg', net, { name: 'hub-drg', onprem: true });
+    const dmz = mk('vcn', net, { name: 'dmz', cidr: '10.0.0.0/23', igw: true, nat: true, sgw: true, drg });
+    sub(dmz, 'untrust', '10.0.0.0/24', true, [['edge-lb', 'lb', sh]]);
+    sub(dmz, 'trust', '10.0.1.0/24', false, [['ngfw-a', 'nva', sec], ['ngfw-b', 'nva', sec]]);
+    spoke(net, 'app', '10.10', drg, [['frontend', [['web-oke', 'oke', appdev, { ocpu: 8, mem: 64 }]]], ['backend', [['api-vm', 'x86', appdev, { ocpu: 4, mem: 32 }]]]]);
+    spoke(net, 'data', '10.20', drg, [['db', [['customer-adb', 'adb', db, { alwaysFree: false }]]]]);
+    mk('res', sec, { name: 'siem-archive', type: 'bucket', size: 1000 });
+    mk('res', sec, { name: 'hsm-vault', type: 'vault' });
+    return 'Oracle\'s Zero Trust landing zone builds on the CIS baseline and adds: a DMZ VCN with a third-party next-generation firewall pair, apps in isolated VCNs whose traffic is always inspected, Zero Trust Packet Routing (security attributes on resources, so policy says app:frontend may reach app:backend regardless of IP), Security Zones that block risky configurations, Access Governance, and logs shipped to a SIEM. The policy conditions use network sources, so admin actions only work from the corporate ZTNA egress. Tradeoff: the strongest posture here, and the most expensive and operationally heavy one.';
+  }},
+  scca: { title: 'SCCA-style mission owner (US DoD)', build() {
+    const t = mk('tenancy', null, { name: 'mission-owner', home: 'us-ashburn-1', regions: ['us-ashburn-1', 'us-phoenix-1'], budget: 50000,
+      groups: 'Administrators, VDSS-Admins, VDMS-Admins, MissionOwners, ThirdPartyAuditors',
+      tags: 'Real deployments run in the US Government or DoD realm, not the commercial one shown here.',
+      policies: [
+        'Allow group Administrators to manage all-resources in tenancy',
+        'Allow group VDSS-Admins to manage all-resources in compartment scca:vdss',
+        'Allow group VDMS-Admins to manage all-resources in compartment scca:vdms',
+        'Allow group MissionOwners to manage all-resources in compartment scca:workload',
+        'Allow group ThirdPartyAuditors to read all-resources in compartment scca:logging'].join('\n') });
+    const sc = mk('comp', t, { name: 'scca' });
+    const vdss = mk('comp', sc, { name: 'vdss' }), vdms = mk('comp', sc, { name: 'vdms' }), logc = mk('comp', sc, { name: 'logging' });
+    const wl = mk('comp', sc, { name: 'workload' }), mission = mk('comp', wl, { name: 'mission-app', budget: 30000 });
+    const drg = mk('drg', vdss, { name: 'boundary-drg', onprem: true });
+    const ss = mk('vcn', vdss, { name: 'vdss', cidr: '10.0.0.0/22', igw: true, nat: true, sgw: true, drg });
+    sub(ss, 'ingress', '10.0.0.0/24', true, [['ingress-lb', 'lb', vdss]]);
+    sub(ss, 'inspection', '10.0.1.0/24', false, [['boundary-fw', 'firewall', vdss]]);
+    const ms = mk('vcn', vdms, { name: 'vdms', cidr: '10.1.0.0/24', sgw: true, drg });
+    sub(ms, 'mgmt', '10.1.0.0/26', false, [['admin-bastion', 'bastion', vdms]]);
+    mk('res', vdms, { name: 'mission-keys', type: 'vault' });
+    mk('res', logc, { name: 'audit-archive', type: 'bucket', size: 2000 });
+    spoke(wl, 'mission', '10.20', drg, [['app', [['mission-oke', 'oke', mission, { ocpu: 16, mem: 128 }]]], ['db', [['mission-adb', 'adb', mission, { alwaysFree: false }]]]]);
+    return 'The Secure Cloud Computing Architecture pattern that Oracle\'s SCCA landing zone implements: VDSS (Virtual Datacenter Security Stack) holds the boundary firewall and ingress, VDMS (Virtual Datacenter Managed Services) holds bastion, keys and management, a separate logging compartment receives all audit logs so an external assessor can read them without seeing anything else, and mission owners run workloads in their own compartment behind the boundary. Traffic from the DoD network enters through FastConnect, crosses VDSS inspection, then reaches workloads. Tradeoff: compliance-driven rigidity; every flow goes through the boundary even when it costs latency.';
+  }},
+};
+// preset helpers: landing-zone compartments, a subnet with resources, a gateway-less spoke on a DRG
+function lzComps(t, top, withExa) {
+  const lz = mk('comp', t, { name: top });
+  const r = { net: mk('comp', lz, { name: 'network' }), sec: mk('comp', lz, { name: 'security' }), app: mk('comp', lz, { name: 'app', budget: 20000 }), db: mk('comp', lz, { name: 'database', budget: 15000 }) };
+  if (withExa) r.exa = mk('comp', lz, { name: 'exainfra' });
+  return r;
+}
+function lzPolicies(top, extra) {
+  return ['Allow group Administrators to manage all-resources in tenancy',
+    `Allow group lz-network-admins to manage virtual-network-family in compartment ${top}:network`,
+    `Allow group lz-security-admins to manage all-resources in compartment ${top}:security`,
+    `Allow group lz-app-admins to manage all-resources in compartment ${top}:app`,
+    `Allow group lz-app-admins to use virtual-network-family in compartment ${top}:network`,
+    `Allow group lz-database-admins to manage database-family in compartment ${top}:database`,
+    ...extra.map(e => `Allow group lz-${e}-admins to manage all-resources in compartment ${top}:${e}`),
+    'Allow group lz-auditors to inspect all-resources in tenancy'].join('\n');
+}
+function sub(vcn, name, c, pub, res) {
+  const s = mk('subnet', vcn, { name, cidr: c, public: pub });
+  res.forEach(([n, type, comp, extra]) => mk('res', s, Object.assign({ name: n, type, comp: comp || '' }, extra)));
+  return s;
+}
+function spoke(comp, name, base, drg, tiers, region) {
+  const v = mk('vcn', comp, Object.assign({ name: name + '-spoke', cidr: base + '.0.0/16', drg }, region ? { region } : {}));
+  tiers.forEach(([sn, res], i) => sub(v, sn, `${base}.${i}.0/24`, false, res));
+  return v;
+}
+
+// ---------- persistence & undo ----------
+function save() { try { localStorage.setItem(LS, JSON.stringify({ S, view, renderer })); } catch (e) {} }
+function load() {
+  try { const d = JSON.parse(localStorage.getItem(LS)); if (d && d.S && Array.isArray(d.S.nodes)) { S = d.S; view = d.view || 'logical'; renderer = ['arch', 'flow', 'ondine'].includes(d.renderer) ? d.renderer : 'ondine'; return true; } } catch (e) {}
+  return false;
+}
+function pushUndo() { undoStack.push(JSON.stringify(S)); if (undoStack.length > 40) undoStack.shift(); $('#undo').disabled = false; }
+function undo() { const s = undoStack.pop(); if (!s) return; S = JSON.parse(s); if (selected && !byId(selected)) selected = null; $('#undo').disabled = !undoStack.length; refresh(); }
+function loadPreset(key) {
+  S = blankState(); S.notes = PRESETS[key].build(); S.title = PRESETS[key].title; selected = tenancies()[0]?.id || null;
+}
+let toastT;
+function toast(msg, withUndo) {
+  const t = $('#toast'); t.innerHTML = `<span>${esc(msg)}</span>` + (withUndo ? '<button type="button" id="toastUndo">Undo</button>' : '');
+  t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 4500);
+  if (withUndo) $('#toastUndo').onclick = () => { undo(); t.hidden = true; };
+}
+
+// ---------- CIDR ----------
+function cidr(s) {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/(\d{1,2})$/.exec(String(s).trim()); if (!m) return null;
+  const o = m.slice(1, 5).map(Number), len = +m[5]; if (o.some(x => x > 255) || len > 32) return null;
+  const ip = ((o[0] << 24) >>> 0) + (o[1] << 16) + (o[2] << 8) + o[3];
+  const size = 2 ** (32 - len), start = ip - (ip % size);
+  return { start, end: start + size - 1, len, aligned: start === ip };
+}
+const overlaps = (a, b) => a && b && a.start <= b.end && b.start <= a.end;
+const within = (inner, outer) => inner && outer && inner.start >= outer.start && inner.end <= outer.end;
+console.assert(overlaps(cidr('10.0.0.0/16'), cidr('10.0.5.0/24')) && !overlaps(cidr('10.0.0.0/16'), cidr('10.1.0.0/16')) && within(cidr('10.0.1.0/24'), cidr('10.0.0.0/16')), 'cidr self-check');
+
+// ---------- costs ----------
+const A1_OCPU = 7.30, A1_GB = 1.095, X86_OCPU = 21.9, X86_GB = 1.46;
+function computeCosts() {
+  const cost = {}, free = {};
+  tenancies().forEach(t => free[t.id] = { left: { ocpu: 2, mem: 12, micro: 2, adb: 2, lb: 1, obj: 20 }, used: { ocpu: 0, mem: 0, micro: 0, adb: 0, lb: 0, obj: 0 } });
+  S.nodes.filter(n => n.kind === 'res').forEach(n => {
+    const f = free[tenancyOf(n).id], L = f.left, U = f.used; let c = 0;
+    const o = Math.max(0, +n.ocpu || 0), g = Math.max(0, +n.mem || 0);
+    switch (n.type) {
+      case 'a1': case 'oke': {
+        const fo = Math.min(o, L.ocpu), fg = Math.min(g, L.mem); L.ocpu -= fo; L.mem -= fg; U.ocpu += o; U.mem += g;
+        c = (o - fo) * A1_OCPU + (g - fg) * A1_GB + (n.type === 'oke' && n.enhanced ? 73 : 0); break; }
+      case 'micro': U.micro++; if (L.micro > 0) L.micro--; break;
+      case 'x86': c = o * X86_OCPU + g * X86_GB; break;
+      case 'gpu': c = 1460; break;
+      case 'lb': U.lb++; if (L.lb > 0) L.lb--; else c = 12; break;
+      case 'firewall': c = 2000; break;
+      case 'adb': if (n.alwaysFree) { U.adb++; if (L.adb > 0) L.adb--; else c = 490; } else c = 490; break;
+      case 'pg': c = 120; break;
+      case 'exa': c = 15000; break;
+      case 'nva': c = 1500; break;
+      case 'bucket': { const s = Math.max(0, +n.size || 0), fs = Math.min(s, L.obj); L.obj -= fs; U.obj += s; c = (s - fs) * 0.0255; break; }
+      default: c = 0;
+    }
+    cost[n.id] = c;
+  });
+  // roll costs up to owning compartment and all of its ancestors
+  const roll = {};
+  S.nodes.filter(n => n.kind === 'res').forEach(n => {
+    const o = ownerComp(n); [...ancestors(o), o].forEach(a => { if (a.kind === 'comp' || a.kind === 'tenancy') roll[a.id] = (roll[a.id] || 0) + cost[n.id]; });
+  });
+  return { cost, free, roll };
+}
+const money = v => v >= 1000 ? '$' + Math.round(v).toLocaleString('en-US') : '$' + (Math.round(v * 100) / 100).toFixed(v < 10 ? 2 : 0);
+
+// ---------- policies ----------
+function policyLines(n) { return String(n.policies || '').split('\n').map(s => s.trim()).filter(Boolean); }
+function effectivePolicies(n) {
+  const comp = n.kind === 'comp' || n.kind === 'tenancy' ? n : ownerComp(n);
+  const chain = [...ancestors(comp), comp].filter(a => a.kind === 'comp' || a.kind === 'tenancy');
+  const names = new Set(chain.map(a => a.name.toLowerCase()));
+  const paths = new Set(chain.filter(a => a.kind === 'comp').map(a => compPath(a).toLowerCase()));
+  const out = [];
+  chain.forEach(a => policyLines(a).forEach(line => {
+    const m = /\bin\s+(tenancy|compartment\s+([\w:.-]+))/i.exec(line);
+    if (!m || !/^(allow|admit)/i.test(line)) return;
+    const target = m[2] ? m[2].toLowerCase() : null;
+    const hits = !target ? true : (paths.has(target) || names.has(target.split(':').pop()) && [...paths].some(p => p.endsWith(target)));
+    if (hits) out.push({ from: a, line });
+  }));
+  return out;
+}
+
+// ---------- lint ----------
+function lint() {
+  const L = [], add = (sev, id, msg, why) => L.push({ sev, id, msg, why });
+  const { free, roll } = computeCosts();
+  tenancies().forEach(t => {
+    const all = descendants(t.id);
+    if (kidsOf(t.id, 'res').length || kidsOf(t.id, 'vcn').length) add('warn', t.id, `${t.name}: resources live directly in the root compartment`, 'Keep the root compartment empty, like an AWS management account. Put work in child compartments so policies, budgets and cleanup have a scope.');
+    if (!t.regions.includes(t.home)) add('error', t.id, `${t.name}: home region ${t.home} is not in its subscribed regions`, 'The home region is fixed at sign-up and is always subscribed. IAM is mastered there.');
+    all.filter(n => n.kind === 'vcn' || n.kind === 'drg').forEach(n => { if (!t.regions.includes(n.region)) add('error', n.id, `${n.name} is in ${n.region}, which ${t.name} has not subscribed to`, 'Subscribe the tenancy to a region (Governance > Region management) before creating regional resources there. Region subscriptions cannot be undone.'); });
+    if (t.orgParent) {
+      const p = byId(t.orgParent);
+      if (p) {
+        if (p.orgParent) add('error', t.id, `${t.name}: its parent ${p.name} is itself a child`, 'Organizations are one level: a parent tenancy with child tenancies. Children cannot have children.');
+        const extra = t.regions.filter(r => !p.regions.includes(r));
+        if (extra.length) add('warn', t.id, `${t.name} subscribes to ${extra.join(', ')} which the parent ${p.name} does not`, 'Oracle advises the parent\'s subscribed regions be a superset of each child\'s.');
+      }
+    }
+    const f = free[t.id];
+    if (f.used.ocpu > 2 || f.used.mem > 12) add('info', t.id, `${t.name}: Arm usage ${f.used.ocpu} OCPU / ${f.used.mem} GB exceeds Always Free (2 / 12)`, 'Fine on a paid (Pay As You Go) account: you pay for the excess. On a Free Tier account, exceeding the limit when the trial ends disables every A1 instance in the tenancy.');
+    if (f.used.micro > 2) add('error', t.id, `${t.name}: ${f.used.micro} E2.1.Micro instances, only 2 exist per tenancy`, 'E2.1.Micro is an Always Free-only shape, limited to two.');
+    if ((roll[t.id] || 0) > 0 && !t.budget && !all.some(n => n.kind === 'comp' && n.budget)) add('warn', t.id, `${t.name}: spend with no budget anywhere`, 'Budgets target a compartment (including its children) or a cost-tracking tag and alert on actual or forecast spend. They alert; they do not stop spending. Use quotas to cap.');
+    if (!t.policies || !/administrators/i.test(t.policies)) add('info', t.id, `${t.name}: the default Administrators policy is missing`, 'Every tenancy starts with "Allow group Administrators to manage all-resources in tenancy". Removing it is possible but unusual.');
+  });
+  S.nodes.forEach(n => {
+    if (n.kind === 'comp' || n.kind === 'tenancy') {
+      if (n.kind === 'comp' && compDepth(n) > 6) add('error', n.id, `${n.name} is ${compDepth(n)} levels deep`, 'OCI allows compartments to nest at most six levels below the root.');
+      policyLines(n).forEach(line => {
+        if (!/^allow/i.test(line)) return;
+        if (n.kind === 'comp' && /\bin\s+tenancy\b/i.test(line)) add('error', n.id, `Policy in ${n.name} grants "in tenancy"`, 'A policy can only grant access to the compartment it is attached to and its children. Attach tenancy-wide policies to the root compartment.');
+        if (/manage\s+all-resources\s+in\s+tenancy/i.test(line) && !/administrators/i.test(line)) add('warn', n.id, `Broad grant: ${line}`, 'manage all-resources in tenancy is full admin. Prefer a resource family in a specific compartment.');
+        const m = /\bin\s+compartment\s+([\w:.-]+)/i.exec(line);
+        if (m) {
+          const target = m[1].toLowerCase(), tn = tenancyOf(n);
+          const desc = descendants(n.id).filter(d => d.kind === 'comp');
+          const found = descendants(tn.id).filter(d => d.kind === 'comp').find(d => compPath(d).toLowerCase() === target || d.name.toLowerCase() === target.split(':').pop());
+          if (!found) add('warn', n.id, `Policy in ${n.name} names compartment "${m[1]}" which does not exist`, 'OCI rejects policy statements that reference unknown compartments. Nested ones are written parent:child relative to where the policy is attached.');
+          else if (n.kind === 'comp' && !desc.includes(found)) add('error', n.id, `Policy in ${n.name} reaches outside its own subtree (${m[1]})`, 'Attach the statement to a common ancestor, usually the root, instead.');
+        }
+      });
+    }
+    if (n.kind === 'vcn') {
+      const c = cidr(n.cidr);
+      if (!c) add('error', n.id, `${n.name}: "${n.cidr}" is not a CIDR`, 'Write it like 10.0.0.0/16.');
+      else {
+        if (c.len < 16 || c.len > 30) add('error', n.id, `${n.name}: /${c.len} is outside OCI's /16 to /30 range for a VCN CIDR`, 'Add more CIDR blocks to a VCN rather than one huge one.');
+        if (!c.aligned) add('warn', n.id, `${n.name}: ${n.cidr} has host bits set`, `The network address would be normalized to a /${c.len} boundary.`);
+      }
+      const d = n.drg && byId(n.drg);
+      if (n.drg && !d) n.drg = '';
+      if (d && d.region !== n.region) add('error', n.id, `${n.name} (${n.region}) attaches to ${d.name} in ${d.region}`, 'A DRG is regional and only attaches VCNs in its region. Cross-region traffic goes DRG to DRG through a remote peering connection.');
+      if (d) S.nodes.filter(o => o.kind === 'vcn' && o.drg === n.drg && o.id > n.id && overlaps(c, cidr(o.cidr))).forEach(o => add('error', n.id, `${n.name} and ${o.name} overlap on ${d.name}`, 'VCNs attached to the same DRG need non-overlapping CIDRs or routing is ambiguous.'));
+      const subs = kidsOf(n.id, 'subnet');
+      if (!subs.length) add('info', n.id, `${n.name} has no subnets`, 'A VCN alone runs nothing. Add a subnet to place VNICs.');
+    }
+    if (n.kind === 'subnet') {
+      const v = byId(n.parent), c = cidr(n.cidr), vc = cidr(v.cidr), rs = kidsOf(n.id, 'res');
+      if (!c) add('error', n.id, `${v.name}/${n.name}: "${n.cidr}" is not a CIDR`, 'Write it like 10.0.1.0/24.');
+      else if (vc && !within(c, vc)) add('error', n.id, `${v.name}/${n.name} (${n.cidr}) is outside the VCN CIDR ${v.cidr}`, 'Subnet ranges must fall within one of the VCN\'s CIDR blocks.');
+      kidsOf(v.id, 'subnet').filter(o => o.id > n.id && overlaps(c, cidr(o.cidr))).forEach(o => add('error', n.id, `${n.name} overlaps ${o.name} in ${v.name}`, 'Subnets in a VCN must not overlap.'));
+      if (n.public && rs.length && !v.igw) add('error', n.id, `${v.name}/${n.name} is public but ${v.name} has no Internet Gateway`, 'Public IPs only work with a route rule 0.0.0.0/0 to an Internet Gateway.');
+      if (!n.public && rs.some(r => ['a1','x86','oke','micro','gpu'].includes(r.type)) && !v.nat && !v.sgw && !v.drg) add('info', n.id, `${v.name}/${n.name} has no egress path`, 'Private instances need a NAT gateway (internet egress) or service gateway (Oracle services such as Object Storage and OS updates) to pull images and patches.');
+      rs.forEach(r => {
+        if (n.public && DB_TYPES.has(r.type)) add('error', r.id, `Database ${r.name} sits in a public subnet`, 'Put databases in private subnets and reach them through private endpoints, a bastion, or the app tier.');
+        if (n.public && ['a1','x86','oke','gpu'].includes(r.type) && kidsOf(v.id, 'subnet').some(s => !s.public)) add('info', r.id, `${r.name} is in a public subnet although the VCN has private ones`, 'Expose a load balancer publicly and keep compute private.');
+      });
+    }
+    if (n.kind === 'res') {
+      const T = RTYPES[n.type], inSubnet = byId(n.parent)?.kind === 'subnet';
+      if (T.subnet === true && !inSubnet) add('error', n.id, `${n.name} (${T.label}) needs a subnet`, 'Instances, load balancers, clusters and DB systems get a VNIC in a subnet. Move it under a subnet.');
+      if (T.subnet === false && inSubnet) add('warn', n.id, `${n.name} (${T.label}) is not network-attached`, 'Buckets and vaults are regional services reached through a public endpoint or service gateway, not subnet members.');
+      if (n.comp && byId(n.comp) && tenancyOf(byId(n.comp)) !== tenancyOf(n)) add('error', n.id, `${n.name} belongs to a compartment in another tenancy`, 'Resources never cross tenancies.');
+    }
+  });
+  // budgets vs rollup
+  S.nodes.filter(n => (n.kind === 'comp' || n.kind === 'tenancy') && +n.budget > 0).forEach(n => {
+    const r = roll[n.id] || 0;
+    if (r > +n.budget) add('warn', n.id, `${n.name} forecast ${money(r)}/mo is over its ${money(+n.budget)} budget`, 'Raise the budget, cut resources, or move them to a compartment with headroom.');
+  });
+  return L;
+}
+
+// ---------- missions ----------
+const anyT = f => tenancies().some(f);
+const resIn = t => descendants(t.id).filter(n => n.kind === 'res');
+const MISSIONS = [
+  { title: 'Free and tidy', pts: 10, goal: 'One tenancy runs an A1 node within Always Free (2 OCPU, 12 GB), has nothing in the root compartment, and has a budget somewhere.',
+    check: () => { const { free } = computeCosts(); return anyT(t => resIn(t).some(r => r.type === 'a1') && free[t.id].used.ocpu <= 2 && free[t.id].used.mem <= 12 && !kidsOf(t.id, 'res').length && !kidsOf(t.id, 'vcn').length && (t.budget || descendants(t.id).some(c => c.kind === 'comp' && c.budget))); } },
+  { title: 'Separation of duties', pts: 15, goal: 'VCNs live in a network compartment, a workload in one of its subnets belongs to another compartment, and a policy grants virtual-network-family.',
+    check: () => anyT(t => { const all = descendants(t.id);
+      return all.some(r => r.kind === 'res' && vcnOf(r) && ownerComp(r).id !== nearestComp(vcnOf(r)).id && /net/i.test(nearestComp(vcnOf(r)).name))
+        && [t, ...all].some(c => /virtual-network-family/i.test(c.policies || '')); }) },
+  { title: 'Three tiers', pts: 15, goal: 'One VCN with a load balancer in a public subnet, compute or OKE in a private subnet, a database in another private subnet, and a NAT gateway.',
+    check: () => S.nodes.some(v => v.kind === 'vcn' && v.nat && (() => { const subs = kidsOf(v.id, 'subnet'), has = (pub, types) => subs.filter(s => !!s.public === pub && kidsOf(s.id, 'res').some(r => types.includes(r.type)));
+      const app = has(false, ['a1','x86','oke','gpu']), dbs = has(false, ['adb','pg','exa']);
+      return has(true, ['lb','nlb']).length && app.length && dbs.length && dbs.some(d => !app.includes(d) || app.length > 1); })()) },
+  { title: 'Hub and spoke', pts: 15, goal: 'A DRG with at least three VCNs attached in its region and no overlapping CIDRs.',
+    check: () => S.nodes.some(d => d.kind === 'drg' && (() => { const vs = S.nodes.filter(v => v.kind === 'vcn' && v.drg === d.id && v.region === d.region);
+      return vs.length >= 3 && vs.every((a, i) => vs.every((b, j) => i >= j || !overlaps(cidr(a.cidr), cidr(b.cidr)))); })()) },
+  { title: 'Second region', pts: 10, goal: 'VCNs in two different regions of the same tenancy, with both regions subscribed.',
+    check: () => anyT(t => new Set(descendants(t.id).filter(v => v.kind === 'vcn' && t.regions.includes(v.region)).map(v => v.region)).size >= 2) },
+  { title: 'Organization', pts: 15, goal: 'A parent tenancy with at least two child tenancies.',
+    check: () => anyT(p => !p.orgParent && tenancies().filter(c => c.orgParent === p.id).length >= 2) },
+  { title: 'Bring a partner', pts: 10, goal: 'An Endorse statement in one tenancy and an Admit statement in another.',
+    check: () => { const e = tenancies().filter(t => /^endorse/im.test(t.policies || '')), a = tenancies().filter(t => /^admit/im.test(t.policies || '')); return e.some(x => a.some(y => x !== y)); } },
+  { title: 'Keyless pods', pts: 10, goal: 'A policy grants OKE workloads access with request.principal.type = \'workload\', so no API keys live in the cluster.',
+    check: () => S.nodes.some(n => /request\.principal\.type\s*=\s*'workload'/i.test(n.policies || '')) },
+  { title: 'Clean review', pts: 10, goal: 'At least one VCN, no errors in the review, and every budgeted compartment under budget.',
+    check: () => S.nodes.some(n => n.kind === 'vcn') && !lint().some(l => l.sev === 'error' || /over its/.test(l.msg)) },
+];
+
+// ---------- mermaid ----------
+const q = s => '["' + String(s).replace(/["\]\n]/g, ' ').trim() + '"]';
+function mermaidSrc(mode) {
+  const out = ['architecture-beta'], edges = [];
+  const { cost } = computeCosts();
+  const any = k => S.nodes.some(k);
+  if (any(n => n.kind === 'vcn' && (n.igw || n.nat))) out.push(`service inet(internet)${q('Internet')}`);
+  if (any(n => n.kind === 'vcn' && n.sgw)) out.push(`service osn(cloud)${q('Oracle Services Network')}`);
+  const placed = new Set();
+  const resLine = (r, inId) => {
+    const T = RTYPES[r.type], own = ownerComp(r), home = nearestComp(r);
+    let lbl = r.name + ' · ' + T.label.replace(/\s*\(.*\)/, '');
+    if (r.type === 'a1' || r.type === 'x86' || r.type === 'oke') lbl += ` ${r.ocpu}c/${r.mem}G`;
+    if (mode === 'logical' && own.id !== home.id) lbl += ` · owned by ${own.name}`;
+    if (mode === 'physical') lbl += ` · ${own.name}`;
+    if (cost[r.id] > 0) lbl += ` · ${money(cost[r.id])}`;
+    out.push(`service ${r.id}(${T.icon})${q(lbl)} in ${inId}`);
+  };
+  const vcnBlock = (v, inId) => {
+    out.push(`group ${v.id}(cloud)${q(`VCN ${v.name} ${v.cidr}` + (mode === 'logical' ? ` · ${v.region}` : ` · ${nearestComp(v).name}`))} in ${inId}`);
+    if (v.igw) { out.push(`service ${v.id}igw(internet)${q('Internet GW')} in ${v.id}`); edges.push(`${v.id}igw:T --> B:inet`); }
+    if (v.nat) { out.push(`service ${v.id}nat(cloud)${q('NAT GW')} in ${v.id}`); edges.push(`${v.id}nat:T --> B:inet`); }
+    if (v.sgw) { out.push(`service ${v.id}sgw(cloud)${q('Service GW')} in ${v.id}`); edges.push(`${v.id}sgw:R --> L:osn`); }
+    let anchor = v.igw ? v.id + 'igw' : v.nat ? v.id + 'nat' : v.sgw ? v.id + 'sgw' : null;
+    let anchorGroup = !!anchor;
+    const subs = kidsOf(v.id, 'subnet');
+    subs.forEach(s => {
+      out.push(`group ${s.id}(cloud)${q(`${s.public ? 'public' : 'private'} subnet ${s.name} ${s.cidr}`)} in ${v.id}`);
+      const rs = kidsOf(s.id, 'res');
+      rs.forEach(r => resLine(r, s.id));
+      if (!rs.length) out.push(`junction ${s.id}j in ${s.id}`);
+      if (rs[0]) {
+        const gw = s.public ? (v.igw && v.id + 'igw') : (v.nat ? v.id + 'nat' : v.sgw ? v.id + 'sgw' : null);
+        if (gw) edges.push(`${rs[0].id}{group}:T --> B:${gw}`);
+        if (!anchor) { anchor = rs[0].id; anchorGroup = true; }
+      }
+    });
+    if (!subs.length && !anchor) out.push(`junction ${v.id}j in ${v.id}`);
+    if (v.drg && byId(v.drg) && anchor) edges.push(`${anchor}${anchorGroup ? '{group}' : ''}:L -- R:${v.drg}`);
+  };
+  const drgLine = (d, inId) => {
+    out.push(`service ${d.id}(cloud)${q(`DRG ${d.name}` + (mode === 'logical' ? ` · ${d.region}` : ''))} in ${inId}`);
+    if (d.onprem) { out.push(`service ${d.id}op(internet)${q('On-premises via VPN or FastConnect')}`); edges.push(`${d.id}op:R -- L:${d.id}`); }
+  };
+  // organizations wrap their tenancies
+  const orgOf = {};
+  tenancies().forEach(t => { if (t.orgParent && byId(t.orgParent)) { orgOf[t.id] = 'org' + t.orgParent; orgOf[t.orgParent] = 'org' + t.orgParent; } });
+  new Set(Object.values(orgOf)).forEach(g => out.push(`group ${g}(cloud)${q('Organization ' + byId(g.slice(3)).name)}`));
+  tenancies().forEach(t => {
+    const tl = `Tenancy ${t.name}` + (t.orgParent && byId(t.orgParent) ? ` · child of ${byId(t.orgParent).name}` : orgOf[t.id] ? ' · organization parent' : '') + ` · home ${t.home}`;
+    out.push(`group ${t.id}(cloud)${q(tl)}` + (orgOf[t.id] ? ` in ${orgOf[t.id]}` : ''));
+    if (mode === 'logical') {
+      const walk = (c, inId) => {
+        let content = 0;
+        kidsOf(c.id, 'comp').forEach(k => { out.push(`group ${k.id}(cloud)${q('Compartment ' + k.name + (k.budget ? ` · budget ${money(+k.budget)}` : ''))} in ${inId}`); walk(k, k.id); content++; });
+        kidsOf(c.id, 'vcn').forEach(v => { vcnBlock(v, inId); content++; });
+        kidsOf(c.id, 'drg').forEach(d => { drgLine(d, inId); content++; });
+        kidsOf(c.id, 'res').forEach(r => { resLine(r, inId); content++; });
+        if (!content) out.push(`junction ${inId}j in ${inId}`);
+      };
+      walk(t, t.id);
+    } else {
+      const all = descendants(t.id);
+      const regs = [...new Set([t.home, ...all.map(n => (n.kind === 'vcn' || n.kind === 'drg' || (n.kind === 'res' && byId(n.parent)?.kind !== 'subnet')) ? regionOf(n) : null).filter(Boolean)])];
+      regs.forEach(r => {
+        const g = `${t.id}r${REGIONS.indexOf(r) >= 0 ? REGIONS.indexOf(r) : r.replace(/\W/g, '')}`;
+        out.push(`group ${g}(cloud)${q('Region ' + r + (r === t.home ? ' (home)' : ''))} in ${t.id}`);
+        let content = 0;
+        all.filter(n => n.kind === 'vcn' && n.region === r).forEach(v => { vcnBlock(v, g); content++; });
+        all.filter(n => n.kind === 'drg' && n.region === r).forEach(d => { drgLine(d, g); content++; });
+        all.filter(n => n.kind === 'res' && byId(n.parent)?.kind !== 'subnet' && regionOf(n) === r).forEach(x => { resLine(x, g); content++; });
+        if (!content) out.push(`junction ${g}j in ${g}`);
+      });
+    }
+  });
+  return out.concat(edges).join('\n');
+}
+
+// Architecture-beta's fcose layout overlaps deeply nested groups, so the default view converts the same
+// lines into a flowchart with nested subgraphs, which dagre lays out as non-overlapping boxes.
+function archToFlow(src) {
+  const items = [], kids = { _root: [] }, edges = [];
+  // the organization wrapper adds a nesting level that breaks dagre's cluster layout; tenancy titles carry the relationship
+  src.split('\n').filter(l => !/^group org\w+/.test(l)).map(l => l.replace(/ in org\w+$/, '')).forEach(l => {
+    let m = /^(group|service|junction) (\w+)(?:\((\w+)\)\["([^"]*)"\])?(?: in (\w+))?$/.exec(l.trim());
+    if (m) { const [, type, id, icon, label, parent] = m; if (type === 'junction') return; items.push({ type, id, icon, label }); (kids[parent || '_root'] ||= []).push(id); kids[id] ||= []; return; }
+    m = /^(\w+)(\{group\})?:[LRTB] <?--?>? [LRTB]:(\w+)(\{group\})?$/.exec(l.trim());
+    // {group} edges attach to the enclosing subgraph: dagre keeps boxes apart only when edges don't reach into them
+    if (m) edges.push([m[3], m[4], m[1], m[2]]);
+  });
+  const byIdM = Object.fromEntries(items.map(i => [i.id, i]));
+  const lbl = (s, one) => '"' + s.replace(/"/g, "'").split(' · ').map(esc).join(one ? ' · ' : '<br/>') + '"';
+  const shape = i => ({ internet: `([${lbl(i.label)}])`, database: `[(${lbl(i.label)})]`, disk: `[/${lbl(i.label)}/]`, cloud: `{{${lbl(i.label)}}}` }[i.icon] || `[${lbl(i.label)}]`);
+  const kindOf = l => /^Organization/.test(l) ? 'org' : /^Tenancy/.test(l) ? 'ten' : /^Compartment/.test(l) ? 'cmp' : /^VCN/.test(l) ? 'vcn' : /^Region/.test(l) ? 'reg' : 'sub';
+  const out = ['flowchart TB'], styles = [];
+  const emit = (id, ind) => {
+    const i = byIdM[id];
+    if (i.type === 'service') { out.push(ind + id + shape(i)); return; }
+    out.push(`${ind}subgraph ${id}[${lbl(i.label, true)}]`, `${ind}  direction TB`);
+    if (!kids[id].length) out.push(`${ind}  ${id}e[" "]:::ghost`); // empty compartments still draw as a box
+    kids[id].forEach(k => emit(k, ind + '  '));
+    out.push(ind + 'end');
+    styles.push(`class ${id} ${kindOf(i.label)}`);
+  };
+  kids._root.forEach(id => emit(id, ''));
+  const d = dark(), c = d ? { org: '#a993f0', ten: '#a993f0', cmp: '#4cc2a8', vcn: '#7fb0ee', reg: '#e3a64a', sub: '#8fc3dc' } : { org: '#5b3fa8', ten: '#5b3fa8', cmp: '#0d6b5b', vcn: '#2f5f9e', reg: '#9a5b00', sub: '#4c7f9e' };
+  Object.entries(c).forEach(([k, v]) => out.push(`classDef ${k} stroke:${v},stroke-width:${k === 'sub' ? 1 : 2}px${k === 'sub' ? ',stroke-dasharray:4 3' : ''}`));
+  out.push('classDef ghost fill:none,stroke:none,color:transparent');
+  const parentOf = {}; Object.entries(kids).forEach(([p, ks]) => ks.forEach(k => parentOf[k] = p));
+  const end = (id, grp) => grp && parentOf[id] && parentOf[id] !== '_root' ? parentOf[id] : id;
+  // outer end first, so the Internet ranks above gateways and gateways above subnets
+  return out.concat(edges.map(([b, bg, a, ag]) => `${end(b, bg)} --- ${end(a, ag)}`), styles).join('\n');
+}
+async function ondineUrl(src) {
+  // ondine.sh renders zlib-deflated, base64url-encoded Mermaid source from the URL path
+  const buf = await new Response(new Blob([src]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer();
+  let bin = ''; new Uint8Array(buf).forEach(b => bin += String.fromCharCode(b));
+  return 'https://ondine.sh/' + btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') + '.svg';
+}
+
+const dark = () => document.documentElement.dataset.theme === 'dark' || (document.documentElement.dataset.theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+let mmReady = false, lastTheme = null, renderSeq = 0;
+function initMermaid() {
+  if (typeof mermaid === 'undefined') return false;
+  const d = dark();
+  if (!mmReady || lastTheme !== d) {
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: d ? 'dark' : 'neutral',
+      fontFamily: getComputedStyle(document.body).fontFamily, architecture: { iconSize: 52, fontSize: 14, idealEdgeLengthMultiplier: 2.2 },
+      flowchart: { htmlLabels: true, curve: 'basis', nodeSpacing: 30, rankSpacing: 45, padding: 12, subGraphTitleMargin: { top: 4, bottom: 6 } } });
+    mmReady = true; lastTheme = d;
+  }
+  return true;
+}
+// ondine (vendored, WebAssembly) renders first; Mermaid takes over if WebAssembly is refused or the source is unsupported
+let ondine = null, ondineSeq = 0, ondineError = '';
+function renderOndine(el, src) {
+  try {
+    ondine ||= window.Ondine.create({ modules: window.Ondine.modules });
+    const r = ondine.render(src, { idPrefix: 'od' + (++ondineSeq) + '-', fontSize: 14 });
+    el.innerHTML = r.svg; el.dataset.w = Math.round(r.width); return true;
+  } catch (e) { ondineError = e.message || String(e); return false; }
+}
+async function renderInto(el, src, engine = 'auto') {
+  if (engine !== 'mermaid' && window.Ondine && renderOndine(el, src)) return true;
+  delete el.dataset.w;
+  if (!initMermaid()) { el.innerHTML = '<p class="err-box">The diagram library did not load. The outline, review and missions still work; reload to retry.</p>'; return false; }
+  try { const { svg } = await mermaid.render('mm' + (++renderSeq), src); el.innerHTML = svg; return true; }
+  catch (e) { el.innerHTML = `<p class="err-box">Mermaid could not draw this design: ${esc(e.message || e)}</p>`; document.querySelectorAll('[id^=dmm]').forEach(x => x.remove()); return false; }
+}
+let drawT;
+function scheduleDraw() { clearTimeout(drawT); drawT = setTimeout(drawDiagram, 200); }
+async function drawDiagram() {
+  const arch = mermaidSrc(view), src = renderer === 'flow' ? archToFlow(arch) : arch, box = $('#diagram');
+  $('#mmsrc').textContent = src;
+  if (renderer === 'ondine' && window.Ondine && renderOndine(box, arch)) { applyFit(); }
+  else {
+    await renderInto(box, renderer === 'ondine' ? archToFlow(arch) : src, 'mermaid');
+    if (renderer === 'ondine') box.insertAdjacentHTML('afterbegin', `<p class="err-box">Ondine could not render here (${esc(ondineError || 'not loaded')}), so Mermaid drew this instead.</p>`);
+  }
+  try { $('#ondine').href = await ondineUrl(arch); } catch (e) { $('#ondine').hidden = true; }
+}
+
+// ---------- policy generator ----------
+// Rewrites the root policy of a tenancy from the design: one admin group per owning compartment,
+// network "use" grants where workloads sit in another compartment's subnets, plus auditors and FinOps.
+function generatePolicies(t) {
+  const keep = policyLines(t).filter(l => /^(define|endorse|admit)\b/i.test(l));
+  const comps = descendants(t.id).filter(c => c.kind === 'comp');
+  const grp = c => c.kind === 'tenancy' ? 'Administrators' : compPath(c).replace(/:/g, '-') + '-admins';
+  const lines = ['Allow group Administrators to manage all-resources in tenancy'], groups = new Set(['Administrators']);
+  const owners = new Set(), netUse = new Set(), oke = new Set();
+  descendants(t.id).forEach(n => {
+    if (n.kind === 'vcn' || n.kind === 'drg') owners.add(nearestComp(n).id);
+    if (n.kind === 'res') {
+      const o = ownerComp(n); owners.add(o.id);
+      const v = vcnOf(n); if (v && nearestComp(v).id !== o.id) netUse.add(o.id + '>' + nearestComp(v).id);
+      if (n.type === 'oke') oke.add(o.id);
+    }
+  });
+  comps.filter(c => owners.has(c.id)).forEach(c => { groups.add(grp(c)); lines.push(`Allow group ${grp(c)} to manage all-resources in compartment ${compPath(c)}`); });
+  [...netUse].forEach(p => { const [o, v] = p.split('>').map(byId); if (o.kind === 'tenancy' || v.kind === 'tenancy') return; groups.add(grp(o)); lines.push(`Allow group ${grp(o)} to use virtual-network-family in compartment ${compPath(v)}`); });
+  [...oke].forEach(id => { const c = byId(id); if (c.kind === 'tenancy') return; lines.push(`Allow any-user to read secret-family in compartment ${compPath(c)} where all {request.principal.type = 'workload', request.principal.namespace = 'default'}`); });
+  lines.push('Allow group Auditors to inspect all-resources in tenancy', 'Allow group FinOps to manage usage-budgets in tenancy', 'Allow group FinOps to read usage-reports in tenancy');
+  groups.add('Auditors'); groups.add('FinOps');
+  t.policies = [...lines, ...keep].join('\n');
+  t.groups = [...groups].join(', ');
+  // policies on child compartments are folded into the root so there is one place to read
+  comps.forEach(c => { c.policies = ''; });
+}
+
+// ---------- terraform ----------
+const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'x';
+const tfName = n => slug(n.name) + '_' + n.id;
+const hstr = s => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\$\{/g, '$${').replace(/%\{/g, '%%{') + '"';
+const dnsLabel = s => (slug(s).replace(/_/g, '').replace(/^[^a-z]+/, '') || 'net').slice(0, 15);
+const SHAPES = { a1: 'VM.Standard.A1.Flex', x86: 'VM.Standard.E5.Flex', micro: 'VM.Standard.E2.1.Micro', gpu: 'VM.GPU.A10.1' };
+function terraformBlocks() {
+  const B = [], add = (id, hcl) => B.push({ id, hcl });
+  const T = tenancies();
+  add('_head', `# Generated by OCI Tenancy Atlas. Starter code: review, then terraform init && terraform plan.
+terraform {
+  required_version = ">= 1.5"
+  required_providers {
+    oci = { source = "oracle/oci", version = ">= 6.0" }
+  }
+}
+
+variable "ssh_public_key" { type = string }
+variable "admin_cidr" {
+  type    = string
+  default = "203.0.113.0/24" # where you SSH from; bastion allow-list
+}
+variable "db_admin_password" {
+  type      = string
+  sensitive = true
+}
+variable "budget_alert_email" { type = string }`);
+  T.forEach(t => {
+    const tv = `var.${slug(t.name)}_tenancy_ocid`;
+    const regs = [...new Set([t.home, ...descendants(t.id).map(regionOf).filter(Boolean)])];
+    add(t.id, `# ---- tenancy ${t.name} ----
+variable "${slug(t.name)}_tenancy_ocid" { type = string }
+` + regs.map(r => `provider "oci" {
+  alias        = "${slug(t.name)}_${slug(r)}"
+  region       = "${r}"
+  tenancy_ocid = ${tv}
+}
+data "oci_identity_availability_domains" "${slug(t.name)}_${slug(r)}" {
+  provider       = oci.${slug(t.name)}_${slug(r)}
+  compartment_id = ${tv}
+}
+data "oci_core_services" "${slug(t.name)}_${slug(r)}" {
+  provider = oci.${slug(t.name)}_${slug(r)}
+  filter {
+    name   = "name"
+    values = ["All .* Services In Oracle Services Network"]
+    regex  = true
+  }
+}`).join('\n') + `
+data "oci_objectstorage_namespace" "${slug(t.name)}" {
+  provider       = oci.${slug(t.name)}_${slug(t.home)}
+  compartment_id = ${tv}
+}` + (t.orgParent && byId(t.orgParent) ? `\n# Child of organization parent ${byId(t.orgParent).name}: create or invite it from the parent (Organization Management), not from this file.` : '')
+      + (t.gov ? '\n# Governance rules to define in the parent tenancy (oci_tenantmanagercontrolplane_* or console):\n' + t.gov.split('\n').map(l => '#   ' + l).join('\n') : ''));
+  });
+  const P = n => { const t = tenancyOf(n); return `oci.${slug(t.name)}_${slug(n.kind === 'comp' || n.kind === 'tenancy' ? t.home : regionOf(n))}`; };
+  const cid = c => c.kind === 'tenancy' ? `var.${slug(c.name)}_tenancy_ocid` : `oci_identity_compartment.${tfName(c)}.id`;
+  const home = n => `oci.${slug(tenancyOf(n).name)}_${slug(tenancyOf(n).home)}`;
+  const ad = n => `data.oci_identity_availability_domains.${slug(tenancyOf(n).name)}_${slug(regionOf(n))}.availability_domains[0].name`;
+  const svc = n => `data.oci_core_services.${slug(tenancyOf(n).name)}_${slug(regionOf(n))}.services[0]`;
+  S.nodes.forEach(n => {
+    const t = tenancyOf(n), tv = `var.${slug(t.name)}_tenancy_ocid`;
+    if (n.kind === 'tenancy' || n.kind === 'comp') {
+      let h = '';
+      if (n.kind === 'comp') h += `resource "oci_identity_compartment" "${tfName(n)}" {
+  provider       = ${home(n)}
+  compartment_id = ${cid(byId(n.parent))}
+  name           = ${hstr(n.name)}
+  description    = ${hstr('Compartment ' + compPath(n))}
+  enable_delete  = true
+}\n`;
+      if (n.kind === 'tenancy') String(n.groups || '').split(',').map(s => s.trim()).filter(g => g && !/^administrators$/i.test(g)).forEach(g => h += `# With identity domains, prefer oci_identity_domains_group in the Default domain.
+resource "oci_identity_group" "${slug(t.name)}_${slug(g)}" {
+  provider       = ${home(n)}
+  compartment_id = ${tv}
+  name           = ${hstr(g)}
+  description    = ${hstr(g)}
+}\n`);
+      const pl = policyLines(n);
+      for (let i = 0; i < pl.length; i += 50) // shortcut: 50 statements per policy chunk, matches the default limit; adjust if your tenancy limit differs
+        h += `resource "oci_identity_policy" "${tfName(n)}_${i / 50}" {
+  provider       = ${home(n)}
+  compartment_id = ${cid(n)}
+  name           = ${hstr((n.kind === 'tenancy' ? 'root' : slug(n.name)) + '-policies' + (i ? '-' + (i / 50 + 1) : ''))}
+  description    = "Generated by OCI Tenancy Atlas"
+  statements = [
+${pl.slice(i, i + 50).map(l => '    ' + hstr(l)).join(',\n')}
+  ]` + (n.kind === 'tenancy' ? `\n  depends_on = [${String(n.groups || '').split(',').map(s => s.trim()).filter(g => g && !/^administrators$/i.test(g)).map(g => `oci_identity_group.${slug(t.name)}_${slug(g)}`).join(', ')}]` : '') + `\n}\n`;
+      const q = String(n.quotas || '').split('\n').map(s => s.trim()).filter(Boolean);
+      if (q.length) h += `# Quotas always live in the root compartment, whatever they target.
+resource "oci_limits_quota" "${tfName(n)}" {
+  provider       = ${home(n)}
+  compartment_id = ${tv}
+  name           = ${hstr(slug(n.name) + '-quota')}
+  description    = ${hstr('Quotas for ' + n.name)}
+  statements = [
+${q.map(l => '    ' + hstr(l)).join(',\n')}
+  ]
+}\n`;
+      if (+n.budget > 0) h += `resource "oci_budget_budget" "${tfName(n)}" {
+  provider       = ${home(n)}
+  compartment_id = ${tv}
+  display_name   = ${hstr(slug(n.name) + '-monthly')}
+  amount         = ${+n.budget}
+  reset_period   = "MONTHLY"
+  target_type    = "COMPARTMENT"
+  targets        = [${cid(n)}]
+}
+resource "oci_budget_alert_rule" "${tfName(n)}_forecast" {
+  provider       = ${home(n)}
+  budget_id      = oci_budget_budget.${tfName(n)}.id
+  type           = "FORECAST"
+  threshold      = 100
+  threshold_type = "PERCENTAGE"
+  recipients     = var.budget_alert_email
+  message        = ${hstr(n.name + ' is forecast to exceed its budget')}
+}\n`;
+      if (String(n.tags || '').trim()) h += '# Tags to define (oci_identity_tag_namespace / oci_identity_tag / oci_identity_tag_default):\n' + n.tags.split('\n').map(l => '#   ' + l).join('\n') + '\n';
+      if (h) add(n.id, h.trimEnd());
+    }
+    if (n.kind === 'vcn') {
+      const c = nearestComp(n), r = tfName(n), d = n.drg && byId(n.drg);
+      let h = `resource "oci_core_vcn" "${r}" {
+  provider       = ${P(n)}
+  compartment_id = ${cid(c)}
+  display_name   = ${hstr(n.name)}
+  cidr_blocks    = [${hstr(n.cidr)}]
+  dns_label      = ${hstr(dnsLabel(n.name))}
+}\n`;
+      if (n.igw) h += `resource "oci_core_internet_gateway" "${r}" {
+  provider       = ${P(n)}
+  compartment_id = ${cid(c)}
+  vcn_id         = oci_core_vcn.${r}.id
+  display_name   = "igw"
+  enabled        = true
+}\n`;
+      if (n.nat) h += `resource "oci_core_nat_gateway" "${r}" {
+  provider       = ${P(n)}
+  compartment_id = ${cid(c)}
+  vcn_id         = oci_core_vcn.${r}.id
+  display_name   = "nat"
+}\n`;
+      if (n.sgw) h += `resource "oci_core_service_gateway" "${r}" {
+  provider       = ${P(n)}
+  compartment_id = ${cid(c)}
+  vcn_id         = oci_core_vcn.${r}.id
+  display_name   = "sgw"
+  services { service_id = ${svc(n)}.id }
+}\n`;
+      if (d) h += `resource "oci_core_drg_attachment" "${r}" {
+  provider     = ${P(n)}
+  drg_id       = oci_core_drg.${tfName(d)}.id
+  display_name = ${hstr(n.name + '-attachment')}
+  network_details {
+    id   = oci_core_vcn.${r}.id
+    type = "VCN"
+  }
+}\n`;
+      const rule = (dest, target, type) => `  route_rules {\n    destination       = ${dest}\n    destination_type  = "${type || 'CIDR_BLOCK'}"\n    network_entity_id = ${target}\n  }\n`;
+      if (n.igw) h += `resource "oci_core_route_table" "${r}_public" {
+  provider       = ${P(n)}
+  compartment_id = ${cid(c)}
+  vcn_id         = oci_core_vcn.${r}.id
+  display_name   = "rt-public"
+${rule('"0.0.0.0/0"', `oci_core_internet_gateway.${r}.id`)}${d ? rule('"10.0.0.0/8"', `oci_core_drg.${tfName(d)}.id`) : ''}}\n`;
+      h += `resource "oci_core_route_table" "${r}_private" {
+  provider       = ${P(n)}
+  compartment_id = ${cid(c)}
+  vcn_id         = oci_core_vcn.${r}.id
+  display_name   = "rt-private"
+${n.nat ? rule('"0.0.0.0/0"', `oci_core_nat_gateway.${r}.id`) : d ? rule('"0.0.0.0/0"', `oci_core_drg.${tfName(d)}.id`) + '  # spoke without NAT: default route to the hub through the DRG\n' : ''}${n.sgw ? rule(`${svc(n)}.cidr_block`, `oci_core_service_gateway.${r}.id`, 'SERVICE_CIDR_BLOCK') : ''}${d && n.nat ? rule('"10.0.0.0/8"', `oci_core_drg.${tfName(d)}.id`) : ''}}`;
+      add(n.id, h);
+    }
+    if (n.kind === 'subnet') {
+      const v = byId(n.parent), c = nearestComp(v);
+      add(n.id, `resource "oci_core_subnet" "${tfName(n)}" {
+  provider                   = ${P(n)}
+  compartment_id             = ${cid(c)}
+  vcn_id                     = oci_core_vcn.${tfName(v)}.id
+  display_name               = ${hstr(n.name)}
+  cidr_block                 = ${hstr(n.cidr)}
+  dns_label                  = ${hstr(dnsLabel(n.name))}
+  prohibit_public_ip_on_vnic = ${!n.public}
+  route_table_id             = oci_core_route_table.${tfName(v)}_${n.public && v.igw ? 'public' : 'private'}.id
+  # The VCN default security list allows SSH from anywhere; replace it, or attach NSGs to VNICs.
+}`);
+    }
+    if (n.kind === 'drg') {
+      add(n.id, `resource "oci_core_drg" "${tfName(n)}" {
+  provider       = ${P(n)}
+  compartment_id = ${cid(nearestComp(n))}
+  display_name   = ${hstr(n.name)}
+}` + (n.onprem ? `
+# On-premises link: add oci_core_cpe + oci_core_ipsec (site-to-site VPN) or
+# oci_core_virtual_circuit (FastConnect), both pointing at oci_core_drg.${tfName(n)}.id` : ''));
+    }
+    if (n.kind === 'res') {
+      const c = cid(ownerComp(n)), s = byId(n.parent).kind === 'subnet' ? byId(n.parent) : null, r = tfName(n);
+      const sid = s ? `oci_core_subnet.${tfName(s)}.id` : null, pub = !!(s && s.public);
+      const o = Math.max(1, +n.ocpu || 1), g = Math.max(1, +n.mem || 6);
+      let h = '';
+      switch (n.type) {
+        case 'a1': case 'x86': case 'micro': case 'gpu':
+          h = `resource "oci_core_instance" "${r}" {
+  provider            = ${P(n)}
+  compartment_id      = ${c}
+  availability_domain = ${ad(n)}
+  display_name        = ${hstr(n.name)}
+  shape               = "${SHAPES[n.type]}"
+` + (n.type === 'a1' || n.type === 'x86' ? `  shape_config {
+    ocpus         = ${o}
+    memory_in_gbs = ${g}
+  }
+` : '') + `  create_vnic_details {
+    subnet_id        = ${sid}
+    assign_public_ip = ${pub}
+  }
+  source_details {
+    source_type = "image"
+    source_id   = var.${n.type === 'a1' ? 'arm' : 'x86'}_image_ocid # e.g. latest Oracle Linux or Ubuntu for this shape
+  }
+  metadata = { ssh_authorized_keys = var.ssh_public_key }
+}
+variable "${n.type === 'a1' ? 'arm' : 'x86'}_image_ocid" { type = string }`; break;
+        case 'oke': {
+          const nodes = Math.max(1, Math.ceil(o / 2));
+          h = `variable "kubernetes_version" {
+  type    = string
+  default = "v1.33.1" # pick a version OKE currently offers
+}
+resource "oci_containerengine_cluster" "${r}" {
+  provider           = ${P(n)}
+  compartment_id     = ${c}
+  vcn_id             = oci_core_vcn.${tfName(vcnOf(n))}.id
+  name               = ${hstr(n.name)}
+  kubernetes_version = var.kubernetes_version
+  type               = "${n.enhanced ? 'ENHANCED_CLUSTER' : 'BASIC_CLUSTER'}"${n.enhanced ? ' # enhanced is required for workload identity' : ''}
+  endpoint_config {
+    subnet_id            = ${sid}
+    is_public_ip_enabled = ${pub}
+  }
+}
+resource "oci_containerengine_node_pool" "${r}" {
+  provider           = ${P(n)}
+  compartment_id     = ${c}
+  cluster_id         = oci_containerengine_cluster.${r}.id
+  name               = "${slug(n.name)}-pool"
+  kubernetes_version = var.kubernetes_version
+  node_shape         = "VM.Standard.A1.Flex"
+  node_shape_config {
+    ocpus         = ${Math.round(o / nodes * 10) / 10}
+    memory_in_gbs = ${Math.round(g / nodes)}
+  }
+  node_source_details {
+    source_type = "IMAGE"
+    image_id    = var.oke_arm_image_ocid # an OKE worker image for your kubernetes_version
+  }
+  node_config_details {
+    size = ${nodes}
+    placement_configs {
+      availability_domain = ${ad(n)}
+      subnet_id           = ${sid}
+    }
+  }
+}
+variable "oke_arm_image_ocid" { type = string }`; break; }
+        case 'lb': h = `resource "oci_load_balancer_load_balancer" "${r}" {
+  provider       = ${P(n)}
+  compartment_id = ${c}
+  display_name   = ${hstr(n.name)}
+  shape          = "flexible"
+  shape_details {
+    minimum_bandwidth_in_mbps = 10
+    maximum_bandwidth_in_mbps = 10 # 10 Mbps is the Always Free size
+  }
+  subnet_ids = [${sid}]
+  is_private = ${!pub}
+}`; break;
+        case 'nlb': h = `resource "oci_network_load_balancer_network_load_balancer" "${r}" {
+  provider       = ${P(n)}
+  compartment_id = ${c}
+  display_name   = ${hstr(n.name)}
+  subnet_id      = ${sid}
+  is_private     = ${!pub}
+}`; break;
+        case 'firewall': h = `resource "oci_network_firewall_network_firewall_policy" "${r}" {
+  provider       = ${P(n)}
+  compartment_id = ${c}
+  display_name   = ${hstr(n.name + '-policy')}
+}
+resource "oci_network_firewall_network_firewall" "${r}" {
+  provider                   = ${P(n)}
+  compartment_id             = ${c}
+  display_name               = ${hstr(n.name)}
+  network_firewall_policy_id = oci_network_firewall_network_firewall_policy.${r}.id
+  subnet_id                  = ${sid}
+}
+# Then point route tables (and DRG / ingress route tables) at the firewall's private IP to steer traffic through it.`; break;
+        case 'nva': h = `# ${n.name}: third-party firewall from the OCI Marketplace (Palo Alto, Fortinet, Check Point, ...).
+# Accept the listing with oci_marketplace_accepted_agreement, then launch oci_core_instance from the
+# listing's image in ${s ? 'subnet ' + s.name : 'a subnet'}, with skip_source_dest_check = true on its VNICs.`; break;
+        case 'bastion': h = `resource "oci_bastion_bastion" "${r}" {
+  provider                     = ${P(n)}
+  compartment_id               = ${c}
+  name                         = ${hstr(slug(n.name))}
+  bastion_type                 = "STANDARD"
+  target_subnet_id             = ${sid}
+  client_cidr_block_allow_list = [var.admin_cidr]
+}`; break;
+        case 'adb': h = `resource "oci_database_autonomous_database" "${r}" {
+  provider                 = ${P(n)}
+  compartment_id           = ${c}
+  db_name                  = ${hstr(slug(n.name).replace(/_/g, '').slice(0, 14) || 'adb')}
+  display_name             = ${hstr(n.name)}
+  db_workload              = "OLTP"
+  compute_model            = "ECPU"
+  compute_count            = 2
+  data_storage_size_in_tbs = 1
+  is_free_tier             = ${!!n.alwaysFree}
+  admin_password           = var.db_admin_password
+` + (sid && !n.alwaysFree ? `  subnet_id                = ${sid} # private endpoint
+` : sid ? '  # Always Free ADB cannot use a private endpoint; it stays on a public endpoint with an ACL.\n' : '') + '}'; break;
+        case 'pg': h = `resource "oci_psql_db_system" "${r}" {
+  provider                    = ${P(n)}
+  compartment_id              = ${c}
+  display_name                = ${hstr(n.name)}
+  db_version                  = "16"
+  shape                       = "PostgreSQL.VM.Standard.E5.Flex"
+  instance_ocpu_count         = 2
+  instance_memory_size_in_gbs = 32
+  instance_count              = 1
+  network_details { subnet_id = ${sid} }
+  storage_details {
+    system_type           = "OCI_OPTIMIZED_STORAGE"
+    is_regionally_durable = true
+  }
+  credentials {
+    username = "pgadmin"
+    password_details {
+      password_type = "PLAIN_TEXT"
+      password      = var.db_admin_password
+    }
+  }
+}`; break;
+        case 'exa': h = `# ${n.name}: Exadata needs oci_database_cloud_exadata_infrastructure, then
+# oci_database_cloud_vm_cluster in ${s ? 'subnet ' + s.name : 'a client subnet'} (plus a backup subnet), then databases.
+# Sizing and licensing choices are too specific to generate here.`; break;
+        case 'bucket': h = `resource "oci_objectstorage_bucket" "${r}" {
+  provider       = ${P(n)}
+  compartment_id = ${c}
+  namespace      = data.oci_objectstorage_namespace.${slug(t.name)}.namespace
+  name           = ${hstr(slug(n.name).replace(/_/g, '-'))}
+  access_type    = "NoPublicAccess"
+  versioning     = "Enabled"
+}`; break;
+        case 'vault': h = `resource "oci_kms_vault" "${r}" {
+  provider       = ${P(n)}
+  compartment_id = ${c}
+  display_name   = ${hstr(n.name)}
+  vault_type     = "DEFAULT"
+}`; break;
+      }
+      add(n.id, h);
+    }
+  });
+  // variable blocks can repeat across resources; keep the first
+  const seen = new Set();
+  return B.map(b => ({ id: b.id, hcl: b.hcl.replace(/variable "([a-z0-9_]+)" \{[^\n]*\}\n?|variable "([a-z0-9_]+)" \{\n[\s\S]*?\n\}\n?/g, (m, a, c) => { const k = a || c; if (seen.has(k)) return ''; seen.add(k); return m; }).trimEnd() })).filter(b => b.hcl);
+}
+function renderTerraform() {
+  const full = terraformBlocks().map(b => b.hcl).join('\n\n') + '\n';
+  $('#tfsrc').textContent = full;
+  $('#tfstats').textContent = `${(full.match(/^resource /gm) || []).length} resources, ${(full.match(/^data /gm) || []).length} data sources, ${full.split('\n').length} lines`;
+}
+
+// ---------- outline ----------
+const ORDER = { comp: 0, vcn: 1, drg: 2, subnet: 3, res: 4 };
+function meta(n, costs) {
+  const c = costs.roll[n.id] ?? costs.cost[n.id];
+  const parts = [];
+  if (n.kind === 'tenancy') parts.push(n.home, n.orgParent ? 'child' : '');
+  if (n.kind === 'vcn') parts.push(n.cidr, n.region);
+  if (n.kind === 'subnet') parts.push(n.public ? 'public' : 'private', n.cidr);
+  if (n.kind === 'drg') parts.push(n.region);
+  if (n.kind === 'res') parts.push(RTYPES[n.type].label.split(' ')[0] === 'Compute' ? n.type.toUpperCase() : RTYPES[n.type].label.split(' (')[0]);
+  if (c > 0) parts.push(money(c) + '/mo');
+  return parts.filter(Boolean).join(' · ');
+}
+function renderTree() {
+  const el = $('#tree'), costs = computeCosts(), issues = lint();
+  const worst = {}; issues.forEach(i => { const r = { error: 3, warn: 2, info: 1 }[i.sev]; if ((worst[i.id] || 0) < r) worst[i.id] = r; });
+  let html = '';
+  const row = (n, depth) => {
+    const sel = n.id === selected, w = worst[n.id];
+    const ownTag = n.kind === 'res' && n.comp && byId(n.comp) && ownerComp(n).id !== nearestComp(n).id ? ` <span class="muted">→ ${esc(byId(n.comp).name)}</span>` : '';
+    html += `<div class="node${sel ? ' sel' : ''}" role="treeitem" tabindex="0" aria-selected="${sel}" data-id="${n.id}" style="margin-left:${depth * 14}px">
+      <span class="chip k-${n.kind}">${KIND[n.kind].chip}</span>
+      <span class="nm">${esc(n.name)}${ownTag}</span>
+      <span class="meta">${w ? `<span class="sevdot sev-${['','info','warn','error'][w]}" title="Has review findings"></span> ` : ''}${esc(meta(n, costs))}</span></div>`;
+    if (sel) {
+      const add = { tenancy: ['comp','vcn','drg','res'], comp: ['comp','vcn','drg','res'], vcn: ['subnet'], subnet: ['res'], drg: [], res: [] }[n.kind];
+      html += `<div class="actions" style="margin-left:${depth * 14}px">${add.map(k => `<button class="btn small" data-add="${k}">+ ${KIND[k].title}</button>`).join('')}<button class="btn small danger" data-del="1">Delete</button></div>`;
+    }
+    kidsOf(n.id).sort((a, b) => ORDER[a.kind] - ORDER[b.kind]).forEach(k => row(k, depth + 1));
+  };
+  tenancies().forEach(t => row(t, 0));
+  el.innerHTML = html || '<p class="muted">Empty design. Add a tenancy, or load a template from the header.</p>';
+}
+
+// ---------- inspector ----------
+function fieldsFor(n) {
+  const t = tenancyOf(n), regs = t.regions;
+  const F = [{ k: 'name', label: 'Name', type: 'text' }];
+  if (n.kind === 'tenancy') F.push(
+    { k: 'home', label: 'Home region', type: 'select', opts: REGIONS, help: 'Chosen at sign-up, never changes. IAM is mastered here; Always Free compute only runs here.' },
+    { k: 'regions', label: 'Subscribed regions', type: 'multi', opts: REGIONS },
+    { k: 'orgParent', label: 'Organization parent', type: 'select', opts: [['', 'None (standalone or parent)'], ...tenancies().filter(o => o !== n && !o.orgParent).map(o => [o.id, o.name])], help: 'Child tenancies are billed through and governed by the parent.' },
+    { k: 'groups', label: 'Groups (identity domain)', type: 'text', help: 'Comma separated. Groups live in the tenancy\'s identity domain; policies grant them rights.' },
+    { k: 'policies', label: 'Policies attached to the root compartment', type: 'area', rows: 5, help: 'Allow <group> to <inspect|read|use|manage> <resource-type> in <tenancy | compartment name> [where ...]' },
+    { k: 'gov', label: 'Governance rules pushed to children', type: 'area', rows: 3, help: 'Parent tenancies only: quotas, tag namespaces and allowed regions that are created and locked in each child.' },
+    { k: 'budget', label: 'Budget for the whole tenancy, USD/month', type: 'number' },
+    { k: 'quotas', label: 'Quotas', type: 'area', rows: 2 },
+    { k: 'tags', label: 'Tags and tag defaults', type: 'area', rows: 2 });
+  if (n.kind === 'comp') F.push(
+    { k: 'policies', label: 'Policies attached here', type: 'area', rows: 4, help: 'Apply here and to every child compartment. Statements may only target this compartment or its children.' },
+    { k: 'budget', label: 'Budget, USD/month (covers child compartments too)', type: 'number' },
+    { k: 'quotas', label: 'Compartment quotas', type: 'area', rows: 2, help: 'e.g. set compute-core quota standard-a1-core-count to 4 in compartment dev. Unlike budgets, quotas actually block.' },
+    { k: 'tags', label: 'Tag defaults', type: 'area', rows: 2 });
+  if (n.kind === 'vcn') F.push(
+    { k: 'cidr', label: 'CIDR block', type: 'text' },
+    { k: 'region', label: 'Region', type: 'select', opts: regs },
+    { k: 'gw', label: 'Gateways', type: 'checks', opts: [['igw', 'Internet GW'], ['nat', 'NAT GW'], ['sgw', 'Service GW']] },
+    { k: 'drg', label: 'Attached DRG', type: 'select', opts: [['', 'None'], ...descendants(t.id).filter(d => d.kind === 'drg').map(d => [d.id, `${d.name} (${d.region})`])] });
+  if (n.kind === 'subnet') F.push(
+    { k: 'cidr', label: 'CIDR block', type: 'text' },
+    { k: 'public', label: 'Public subnet', type: 'bool', help: 'Public allows public IPs on VNICs. Private forbids them; reach the internet through NAT.' });
+  if (n.kind === 'drg') F.push(
+    { k: 'region', label: 'Region', type: 'select', opts: regs },
+    { k: 'onprem', label: 'Has a VPN or FastConnect to on-premises', type: 'bool' });
+  if (n.kind === 'res') {
+    const T = RTYPES[n.type], inSubnet = byId(n.parent).kind === 'subnet';
+    F.push({ k: 'type', label: 'Type', type: 'select', opts: Object.entries(RTYPES).filter(([, v]) => inSubnet ? v.subnet !== false : true).map(([k, v]) => [k, v.label]) });
+    if (T.fields.includes('ocpu')) F.push({ k: 'ocpu', label: 'OCPUs' + (n.type === 'oke' ? ' across worker nodes' : ''), type: 'number' }, { k: 'mem', label: 'Memory GB', type: 'number' });
+    if (T.fields.includes('enhanced')) F.push({ k: 'enhanced', label: 'Enhanced cluster (paid control plane)', type: 'bool' });
+    if (T.fields.includes('alwaysFree')) F.push({ k: 'alwaysFree', label: 'Always Free instance (2 per tenancy)', type: 'bool' });
+    if (T.fields.includes('size')) F.push({ k: 'size', label: 'Stored GB', type: 'number' });
+    if (inSubnet) F.push({ k: 'comp', label: 'Owning compartment', type: 'select', opts: [['', `Same as the subnet (${nearestComp(n).name})`], ...[t, ...descendants(t.id)].filter(c => c.kind === 'comp' || c.kind === 'tenancy').map(c => [c.id, c.kind === 'tenancy' ? 'root (' + c.name + ')' : compPath(c)])], help: 'Cost and IAM follow the owning compartment, not the subnet.' });
+    else F.push({ k: 'region', label: 'Region', type: 'select', opts: [['', `Home (${t.home})`], ...regs.map(r => [r, r])] });
+  }
+  return F;
+}
+function renderInspector() {
+  const el = $('#inspector'), n = selected && byId(selected);
+  if (!n) { el.innerHTML = '<h2>Inspector</h2><p class="muted">Select something in the outline to edit it and see how OCI treats it.</p>'; return; }
+  const K = KIND[n.kind], costs = computeCosts();
+  const ctl = f => {
+    const id = 'f-' + f.k, v = n[f.k];
+    const opt = o => Array.isArray(o) ? o : [o, o];
+    switch (f.type) {
+      case 'text': return `<input type="text" id="${id}" data-k="${f.k}" value="${esc(v)}">`;
+      case 'number': return `<input type="number" id="${id}" data-k="${f.k}" min="0" step="any" value="${esc(v)}">`;
+      case 'area': return `<textarea id="${id}" data-k="${f.k}" rows="${f.rows}" spellcheck="false">${esc(v)}</textarea>`;
+      case 'select': return `<select id="${id}" data-k="${f.k}">${f.opts.map(opt).map(([a, b]) => `<option value="${esc(a)}"${a === (v ?? '') ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select>`;
+      case 'bool': return `<div class="checks"><label><input type="checkbox" id="${id}" data-k="${f.k}"${v ? ' checked' : ''}> yes</label></div>`;
+      case 'multi': return `<div class="checks">${f.opts.map(r => `<label><input type="checkbox" data-multi="${f.k}" value="${r}"${(v || []).includes(r) ? ' checked' : ''}>${r}</label>`).join('')}</div>`;
+      case 'checks': return `<div class="checks">${f.opts.map(([k, l]) => `<label><input type="checkbox" id="f-${k}" data-k="${k}"${n[k] ? ' checked' : ''}> ${l}</label>`).join('')}</div>`;
+    }
+  };
+  let extra = '';
+  if (n.kind === 'comp' || n.kind === 'tenancy' || n.kind === 'res') {
+    const eff = effectivePolicies(n);
+    extra += `<div class="field"><span class="lbl">Policy lines that apply ${n.kind === 'res' ? 'to its owning compartment' : 'here'} (inherited from above)</span>
+      <div class="eff">${eff.length ? eff.map(e => `<div><span>${esc(e.from.kind === 'tenancy' ? 'root' : e.from.name)}:</span> ${esc(e.line)}</div>`).join('') : '<div>No Allow statement reaches this compartment. Only tenancy administrators can act here.</div>'}</div></div>`;
+  }
+  if (n.kind === 'comp') extra += `<p class="mono muted" style="font-size:.75rem">path ${esc(compPath(n))} · depth ${compDepth(n)} of 6 · ocid1.compartment.oc1..${n.id}</p>`;
+  if ((n.kind === 'comp' || n.kind === 'tenancy')) extra += `<p class="muted" style="font-size:.85rem">Monthly spend rolling up here: <b class="mono">${money(costs.roll[n.id] || 0)}</b>${+n.budget ? ` of ${money(+n.budget)} budget` : ''}</p>`;
+  if (n.kind === 'res') extra += `<p class="muted" style="font-size:.85rem">Estimated: <b class="mono">${money(costs.cost[n.id] || 0)}/mo</b> after Always Free allowances. Region ${regionOf(n)}.</p>`;
+  if (n.kind === 'tenancy') extra += `<div class="field"><span class="lbl">Policies</span><div class="row"><button class="btn small primary" type="button" id="genPol">Generate policies</button></div><span class="help">Rewrites this tenancy's root policy from the design: an admin group per compartment that owns something, "use virtual-network-family" where workloads sit in another compartment's subnets, OKE workload identity, auditors and FinOps. Cross-tenancy Define/Endorse/Admit lines are kept. Undo restores the old set.</span></div>`;
+  const tf = terraformBlocks().filter(b => b.id === n.id).map(b => b.hcl).join('\n\n');
+  if (tf) extra += `<details class="field"><summary>Terraform for this ${esc(K.title.toLowerCase())}</summary><pre class="src" style="margin-top:6px">${esc(tf)}</pre></details>`;
+  el.innerHTML = `<div class="explain"><div class="row"><span class="chip k-${n.kind}">${K.chip}</span><h2>${esc(K.title)}</h2></div><p>${esc(K.what)}</p><p class="par">${esc(K.par)}</p></div>
+    <div class="fields">${fieldsFor(n).map(f => `<div class="field"><label for="f-${f.k}">${esc(f.label)}</label>${ctl(f)}${f.help ? `<span class="help">${esc(f.help)}</span>` : ''}</div>`).join('')}${extra}</div>`;
+}
+function onInspectorChange(e) {
+  const n = selected && byId(selected); if (!n) return;
+  const t = e.target;
+  pushUndo();
+  if (t.dataset.multi) {
+    const k = t.dataset.multi; n[k] = [...document.querySelectorAll(`[data-multi="${k}"]:checked`)].map(x => x.value);
+    if (k === 'regions' && !n[k].includes(n.home)) n[k].push(n.home);
+  } else if (t.dataset.k) {
+    const k = t.dataset.k;
+    n[k] = t.type === 'checkbox' ? t.checked : t.type === 'number' ? (t.value === '' ? '' : +t.value) : t.value;
+    if (k === 'home' && !n.regions.includes(n.home)) n.regions.push(n.home);
+    if (k === 'type') { const T = RTYPES[n.type]; if (T.fields.includes('ocpu') && !n.ocpu) { n.ocpu = 1; n.mem = 6; } }
+  }
+  refresh(true);
+}
+
+// ---------- review / finops / missions ----------
+function renderReview() {
+  const L = lint().sort((a, b) => ({ error: 0, warn: 1, info: 2 }[a.sev] - { error: 0, warn: 1, info: 2 }[b.sev]));
+  $('#lint').innerHTML = L.length ? L.map(l => `<div class="lint-item" role="button" tabindex="0" data-goto="${l.id}"><span class="sevdot sev-${l.sev}" aria-label="${l.sev}"></span><b>${esc(l.msg)}</b><span class="why">${esc(l.why)}</span></div>`).join('') : '<p class="muted">No findings. Nice.</p>';
+  const { cost, free, roll } = computeCosts();
+  let h = '<p class="muted" style="font-size:.85rem">Rough monthly list prices at 730 hours, after Always Free allowances. Teaching numbers, not quotes. In OCI, NAT gateways, DRGs, network load balancers and the first 10 TB/month of egress cost nothing, and prices are the same in every commercial region.</p>';
+  tenancies().forEach(t => {
+    const f = free[t.id];
+    h += `<div class="stack"><h3>${esc(t.name)} <span class="muted mono" style="font-size:.8rem">${money(roll[t.id] || 0)}/mo</span></h3>
+      <div class="free">
+        <div>Arm OCPU<b>${f.used.ocpu} / 2</b></div><div>Arm memory<b>${f.used.mem} / 12 GB</b></div>
+        <div>E2 Micro<b>${f.used.micro} / 2</b></div><div>Free ADB<b>${f.used.adb} / 2</b></div>
+        <div>Load balancer<b>${f.used.lb} / 1 free</b></div><div>Object Storage<b>${f.used.obj} / 20 GB</b></div>
+      </div>
+      <div class="scroll-x"><table class="fin"><thead><tr><th>Compartment</th><th class="num">Spend</th><th class="num">Budget</th><th>Use</th></tr></thead><tbody>`;
+    [t, ...descendants(t.id).filter(c => c.kind === 'comp')].forEach(c => {
+      const r = roll[c.id] || 0, b = +c.budget || 0, pct = b ? r / b : 0;
+      h += `<tr><td>${c.kind === 'tenancy' ? 'root' : esc(compPath(c))}</td><td class="num">${money(r)}</td><td class="num">${b ? money(b) : '-'}</td><td>${b ? `<div class="meter${pct > 1 ? ' over' : pct > 0.8 ? ' hot' : ''}" title="${Math.round(pct * 100)}%"><i style="width:${Math.min(100, pct * 100)}%"></i></div>` : '<span class="muted" style="font-size:.78rem">no budget</span>'}</td></tr>`;
+    });
+    h += '</tbody></table></div></div>';
+  });
+  $('#finops').innerHTML = h || '<p class="muted">Nothing to price yet.</p>';
+}
+function renderMissions() {
+  let pts = 0, max = 0;
+  $('#missions').innerHTML = MISSIONS.map(m => { const ok = !!m.check(); max += m.pts; if (ok) pts += m.pts;
+    return `<div class="mission${ok ? ' done' : ''}"><div class="row"><h3 style="margin-right:auto">${esc(m.title)}</h3><span class="st">${ok ? 'done' : 'open'} · ${m.pts} pts</span></div><p style="font-size:.9rem">${esc(m.goal)}</p></div>`; }).join('');
+  const L = lint(), e = L.filter(l => l.sev === 'error').length, w = L.filter(l => l.sev === 'warn').length;
+  $('#score').textContent = `${pts}/${max} pts · ${e} errors · ${w} warnings`;
+}
+
+// ---------- learn + rosetta ----------
+const LEARN = [
+  { h: 'Two axes: logical and physical', body: `<p>OCI separates <b>who owns and pays for a thing</b> from <b>where it runs</b>. Compartments are global and logical; regions, availability domains (ADs) and fault domains are physical. A compartment can hold a VCN in Frankfurt and a bucket in Jerusalem at once.</p>`,
+    mm: `flowchart TB
+  org["Organization (optional)"] --> ten["Tenancy = account + identity domain"]
+  ten --> root["Root compartment"]
+  root --> c1["Compartment network"] & c2["Compartment prod"]
+  c2 --> c3["prod-app"] & c4["prod-data"]
+  subgraph Physical
+    reg["Region eu-frankfurt-1"] --> ad["Availability domains 1..3"] --> fd["Fault domains 1..3 per AD"]
+  end
+  c1 -. VCN lives in a compartment AND a region .-> reg`,
+    after: `<ul><li>Subnets are regional by default, so one subnet spans all ADs. In AWS each subnet is pinned to one AZ.</li><li>Many regions have one AD; there you spread across fault domains (separate racks) instead.</li><li>Toggle Logical and Physical in the Diagram tab to see the same design both ways.</li></ul>` },
+  { h: 'Where permissions live', body: `<p>Users, groups and dynamic groups live in the tenancy's <b>identity domain</b>. Permissions live in <b>policies</b>, which are <b>attached to a compartment</b> and apply to it and everything below it. A policy reads like a sentence:</p><p class="mono" style="background:var(--sunk);padding:8px;border-radius:6px">Allow group Developers to manage instance-family in compartment dev where request.region = 'fra'</p>
+    <ul><li><b>Verbs</b> stack: inspect (list) &lt; read (get) &lt; use (work with existing) &lt; manage (create, delete).</li><li><b>Resource types</b> come in families: instance-family, virtual-network-family, object-family, cluster-family, or all-resources.</li><li>A policy attached to compartment X can only grant on X or its children. Tenancy-wide grants go on the root.</li><li>No access by default. You add Allow statements; nothing is granted implicitly except to Administrators.</li><li><b>Dynamic groups</b> match instances by rule (an instance principal). <b>OKE workload identity</b> lets a pod's service account be the principal, like IRSA on EKS.</li><li>Across tenancies, both sides must agree: <b>Endorse</b> on the caller's side, <b>Define</b> plus <b>Admit</b> on the resource side.</li></ul>`,
+    mm: `flowchart LR
+  g["Group Developers"] -->|named in| p["Policy attached to root"]
+  p -->|"in compartment dev"| dev["dev"]
+  dev --> devA["dev:team-a (inherits)"]
+  p -. "cannot reach" .-x prod["prod"]`,
+    after: `<p class="muted">Closest analogies: GCP IAM bindings on a folder, Azure role assignments at a scope, or a Kubernetes RoleBinding in a namespace. AWS IAM differs: there, policies attach to principals and resources, and SCPs set the outer limit.</p>` },
+  { h: 'Guardrails that actually block', body: `<ul><li><b>Service limits</b>: Oracle-set ceilings per tenancy and region. Raise them by request.</li><li><b>Compartment quotas</b>: your own caps, written as statements such as <span class="mono">set compute-core quota standard-a1-core-count to 4 in compartment dev</span> or <span class="mono">zero gpu-family quotas in tenancy</span>. Kubernetes analogy: ResourceQuota.</li><li><b>Governance rules</b> (organizations): the parent pushes quotas, tag namespaces and allowed regions into child tenancies and locks them. Closest to AWS SCPs or GCP organization policies.</li><li><b>Security Zones</b> and <b>Cloud Guard</b>: preventive and detective posture checks on compartments.</li><li><b>Budgets</b> only alert. They never stop spending, so pair them with quotas.</li></ul>` },
+  { h: 'FinOps in OCI', body: `<ul><li>Cost tracks to the <b>owning compartment</b> and rolls up its ancestors. Design compartments around who pays, and you get showback for free.</li><li><b>Cost-tracking tags</b>: defined tags (namespace, can be required and defaulted per compartment) can be marked for cost tracking; freeform tags are just labels.</li><li><b>Budgets</b> target a compartment or a cost-tracking tag, with alert rules on actual or forecast spend.</li><li><b>Cost Analysis</b> in the console, plus daily <b>cost and usage reports</b> exported to Object Storage, including a FOCUS-format version for FinOps tools.</li><li>Pricing quirks next to AWS: no NAT gateway charge, 10 TB/month egress free, network load balancers free, one price in every commercial region.</li><li>In an organization the parent sees every child's cost; FinOps lives in the parent.</li></ul>` },
+  { h: 'Always Free, as of late 2026', body: `<ul><li>Ampere A1 Arm: 1,500 OCPU-hours and 9,000 GB-hours a month, which is 2 OCPU and 12 GB always on, split across one or two instances. It was 4 OCPU and 24 GB until mid-2026.</li><li>Two E2.1.Micro x86 instances, two Always Free Autonomous Databases, 200 GB block storage total, 20 GB Object Storage, one 10 Mbps flexible load balancer.</li><li>Free compute runs only in the home region, which you cannot change.</li><li>On a Free Tier account, idle Always Free instances can be reclaimed, and being over the A1 limit when the trial ends disables all A1 instances. Upgrading to Pay As You Go keeps the free allowance and removes the reclamation risk.</li><li>A $1 budget plus quotas that zero everything except A1 is a cheap safety net.</li></ul>` },
+  { h: 'How a packet leaves a VCN', body: `<p>Every subnet has a route table and one or more security lists; each VNIC can also join network security groups (NSGs). Security lists apply to the whole subnet, NSGs to chosen VNICs, and both are stateful by default.</p>`,
+    mm: `flowchart LR
+  vm["VNIC in subnet"] --> sl{"Security list + NSG"}
+  sl --> rt{"Subnet route table"}
+  rt -->|"0.0.0.0/0, public subnet"| igw["Internet Gateway"]
+  rt -->|"0.0.0.0/0, private subnet"| nat["NAT Gateway"]
+  rt -->|"Oracle services CIDR"| sgw["Service Gateway"] --> osn["Object Storage, OCIR, updates"]
+  rt -->|"10.0.0.0/8, on-prem, other VCNs"| drg["DRG"] --> vpn["VPN / FastConnect / RPC to other region"]`,
+    after: `<p class="muted">AWS mapping: IGW is IGW, NAT is NAT gateway, Service Gateway is a VPC gateway endpoint for all Oracle services at once, DRG is a Transit Gateway, NSG is a security group, security lists sit where NACLs do but are stateful.</p>` },
+  { h: 'Compartment or tenancy?', body: `<ul><li><b>New compartment</b> when you need a separate IAM scope, budget or quota inside the same admin team: environments, projects, a partner's sandbox. Cheap; nest freely up to six levels.</li><li><b>New tenancy</b> when you need hard isolation: separate identity domain, separate service limits, separate blast radius, or separate legal ownership. Join it to an organization so billing and governance stay central.</li><li>Solo: one tenancy, one compartment. Small team: network / dev / prod / shared. Startup: add a hub DRG, child compartments per data domain, a DR region. Enterprise: an organization of tenancies, each with a landing-zone compartment tree.</li></ul>` },
+];
+const ROSETTA = [
+  ['Organization (parent + child tenancies)', 'AWS Organizations (management + member accounts)', 'Organization node', 'Management groups over subscriptions', 'Fleet of clusters (RHACM)', 'Children are full tenancies; created children cannot leave, invited ones can.'],
+  ['Tenancy', 'Account', 'Organization + billing account, roughly', 'Entra tenant + subscription', 'A cluster', 'Has its own identity domain and service limits.'],
+  ['Root compartment', 'The account itself', 'Organization root', 'Tenant root management group', 'Cluster scope', 'Keep it empty of workloads.'],
+  ['Compartment', 'No exact match: OU that holds resources, or tag-scoped IAM', 'Folder / project', 'Resource group', 'Project / namespace', 'Global, nestable 6 deep, policies inherit down, cost rolls up.'],
+  ['Identity domain', 'IAM Identity Center + IAM users', 'Cloud Identity', 'Entra ID', 'OAuth / identity provider config', ''],
+  ['Group / dynamic group', 'IAM group / instance profile role', 'Group / service account', 'Group / managed identity', 'Group / ServiceAccount', 'Dynamic groups match instances by rule.'],
+  ['Policy statement', 'IAM policy document', 'IAM binding', 'Role assignment', 'Role + RoleBinding', 'Written in English-like syntax, attached to a compartment.'],
+  ['Workload identity (OKE)', 'IRSA / EKS Pod Identity', 'GKE Workload Identity', 'AKS Workload Identity', 'Projected ServiceAccount token', 'request.principal.type = workload in a where clause.'],
+  ['Endorse / Define / Admit', 'Cross-account role trust + caller permission', 'Cross-project IAM binding', 'Lighthouse / guest users', 'n/a', 'Both tenancies must write a statement.'],
+  ['Governance rules', 'SCPs + tag policies', 'Organization policies', 'Azure Policy', 'Policy engines (Kyverno, Gatekeeper)', 'Parent pushes and locks quotas, tags, regions.'],
+  ['Compartment quota', 'Service quotas (account) / SCP denies', 'Quotas', 'Quotas + Policy', 'ResourceQuota', 'Can zero a whole service family.'],
+  ['Region', 'Region', 'Region', 'Region', 'n/a', 'Same price everywhere; subscribe explicitly.'],
+  ['Availability domain', 'Availability Zone', 'Zone', 'Availability zone', 'topology zone label', 'Many regions have only one AD.'],
+  ['Fault domain', 'Spread placement group', 'n/a', 'Fault domain (availability set)', 'Pod anti-affinity across nodes', 'Three per AD.'],
+  ['VCN', 'VPC', 'VPC (global!)', 'VNet', 'Cluster SDN', 'Regional, /16 to /30 blocks.'],
+  ['Subnet (regional)', 'Subnet (single AZ)', 'Subnet (regional)', 'Subnet', 'n/a', 'Public vs private is a subnet property.'],
+  ['Security list / NSG', 'NACL position, but stateful / security group', 'Firewall rules / tags', 'NSG', 'NetworkPolicy', ''],
+  ['Internet / NAT / Service gateway', 'IGW / NAT GW / gateway endpoints', 'Default route / Cloud NAT / Private Google Access', 'Default / NAT GW / service endpoints', 'Route / egress IP', 'NAT gateway has no charge.'],
+  ['DRG', 'Transit Gateway + VGW', 'Cloud Router + NCC', 'Virtual WAN hub', 'n/a', 'Hub for VCNs, VPN, FastConnect, remote peering.'],
+  ['FastConnect', 'Direct Connect', 'Cloud Interconnect', 'ExpressRoute', 'n/a', ''],
+  ['OCID', 'ARN', 'Resource name', 'Resource ID', 'UID', 'ocid1.<type>.<realm>.<region>..<unique>'],
+  ['Defined / freeform tags', 'Tags + tag policies', 'Labels / tags', 'Tags', 'Labels / annotations', 'Defined tags can be required, defaulted, and cost-tracked.'],
+  ['Budgets / Cost Analysis / cost reports', 'Budgets / Cost Explorer / CUR', 'Budgets / billing export', 'Cost Management', 'OpenCost / Kubecost', 'Reports land in Object Storage, FOCUS available.'],
+  ['OKE', 'EKS', 'GKE', 'AKS', 'OpenShift', 'Basic clusters have a free control plane.'],
+  ['Object Storage', 'S3', 'Cloud Storage', 'Blob Storage', 'ODF / MCG', 'Also speaks an S3-compatible API.'],
+  ['Autonomous Database', 'RDS / Aurora', 'Cloud SQL / AlloyDB', 'Azure SQL', 'Operators (CloudNativePG)', ''],
+  ['Vault', 'KMS + Secrets Manager', 'Cloud KMS + Secret Manager', 'Key Vault', 'Secrets + external-secrets', ''],
+  ['Bastion service', 'SSM Session Manager / EC2 Instance Connect Endpoint', 'IAP TCP forwarding', 'Azure Bastion', 'oc debug / port-forward', 'Time-limited SSH sessions with no public IP.'],
+];
+async function renderLearn() {
+  const el = $('#learn');
+  if (!el.dataset.done) {
+    el.innerHTML = LEARN.map((c, i) => `<article class="card"><h2>${esc(c.h)}</h2>${c.body}${c.mm ? `<div class="mm" id="lmm${i}"></div>` : ''}${c.after || ''}</article>`).join('');
+    el.dataset.done = '1'; el.dataset.theme = '';
+  }
+  if (el.dataset.theme !== String(dark())) {
+    el.dataset.theme = String(dark());
+    for (const [i, c] of LEARN.entries()) if (c.mm) await renderInto($('#lmm' + i), c.mm);
+  }
+}
+// ---------- links + directory ----------
+const D = {
+  home: 'https://docs.oracle.com/iaas/Content/home.htm',
+  free: 'https://docs.oracle.com/en-us/iaas/Content/FreeTier/resourceref.htm',
+  policies: 'https://docs.oracle.com/iaas/Content/Identity/Concepts/policies.htm',
+  policyRef: 'https://docs.oracle.com/en-us/iaas/Content/Identity/Reference/policyreference.htm',
+  verbs: 'https://docs.oracle.com/iaas/Content/Identity/policieshow/Verbs.htm',
+  syntax: 'https://docs.cloud.oracle.com/iaas/Content/Identity/Concepts/policysyntax.htm',
+  advanced: 'https://docs.cloud.oracle.com/iaas/Content/Identity/policies/permissions.htm',
+  net: 'https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/overview.htm',
+  seclists: 'https://docs.cloud.oracle.com/Content/Network/Concepts/securitylists.htm',
+  routes: 'https://docs.oracle.com/iaas/Content/Network/Tasks/managingroutetables_topic-working.htm',
+  billing: 'https://docs.oracle.com/iaas/Content/Billing/Concepts/billingoverview.htm',
+  budgets: 'https://docs.cloud.oracle.com/iaas/Content/Billing/Concepts/budgetsoverview.htm',
+  quotas: 'https://docs.cloud.oracle.com/iaas/Content/Quotas/Concepts/resourcequotas.htm',
+  reports: 'https://docs.cloud.oracle.com/iaas/Content/Billing/Concepts/costusagereportsoverview.htm',
+  org: 'https://docs.oracle.com/iaas/Content/General/Concepts/organzation_management_overview.htm',
+  gov: 'https://docs.oracle.com/en-us/iaas/Content/General/organization/add-governance.htm',
+  wi: 'https://docs.cloud.oracle.com/en-us/iaas/Content/ContEng/Tasks/contenggrantingworkloadaccesstoresources.htm',
+  lz: 'https://docs.oracle.com/en-us/iaas/Content/cloud-adoption-framework/oci-landing-zones-overview.htm',
+  coreLz: 'https://docs.oracle.com/en-us/iaas/Content/cloud-adoption-framework/oci-core-landing-zone.htm',
+  tfProvider: 'https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/terraformproviderconfiguration.htm',
+};
+const LINKS = [
+  { h: 'Start here', items: [
+    ['OCI documentation home', D.home, 'The root of every service doc.'],
+    ['Always Free resources', D.free, 'What is free, the limits, and the trial-end rules.'],
+    ['How policies work', D.policies, 'The one IAM page to read first.'],
+    ['Networking overview', D.net, 'VCNs, subnets, gateways and the DRG in one page.'],
+    ['Landing zones overview', D.lz, 'Oracle\'s blueprint catalog: Core, Operating Entities, SCCA.'],
+  ] },
+  { h: 'Landing zones you can deploy', items: [
+    ['Operating Entities Landing Zone (GitHub)', 'https://github.com/oci-landing-zones/oci-landing-zone-operating-entities', 'One-OE, Multi-OE and multi-tenancy blueprints, add-ons, workload extensions.'],
+    ['Operating Entities project site', 'https://oci-landing-zones.github.io/oci-landing-zone-operating-entities/', 'Rendered docs for the same repo.'],
+    ['OE hub models (A to E)', 'https://github.com/oci-landing-zones/oci-landing-zone-operating-entities/blob/master/addons/oci-hub-models/readme.md', 'Firewall options for the hub VCN, with packet-flow animations.'],
+    ['OE FAQ', 'https://github.com/oci-landing-zones/oci-landing-zone-operating-entities/blob/master/faq', 'Choosing a blueprint size, troubleshooting.'],
+    ['Core Landing Zone (GitHub)', 'https://github.com/oci-landing-zones/terraform-oci-core-landingzone', 'The CIS-compliant default, successor to the CIS and Enterprise LZs.'],
+    ['Core Landing Zone deployment guide', 'https://github.com/oci-landing-zones/terraform-oci-core-landingzone/blob/main/DEPLOYMENT-GUIDE.md', 'Every variable and option explained.'],
+    ['Core Landing Zone docs page', D.coreLz, 'Architecture diagram and the Deploy to OCI button.'],
+    ['SCCA Landing Zone (GitHub)', 'https://github.com/oci-landing-zones/oci-scca-landingzone', 'US DoD mission owner and broker variants.'],
+    ['CIS OCI Foundations Benchmark', 'https://www.cisecurity.org/benchmark/oracle_cloud', 'The controls the landing zones implement.'],
+  ] },
+  { h: 'Terraform', items: [
+    ['Configuring the OCI Terraform provider', D.tfProvider, 'Auth options: API key, instance principal, security token.'],
+    ['Landing zone module orchestrator', 'https://github.com/oci-landing-zones/terraform-oci-modules-orchestrator', 'Runs the IAM, network, security and observability modules from JSON.'],
+    ['IAM modules', 'https://github.com/oci-landing-zones/terraform-oci-modules-iam', 'Compartments, groups, dynamic groups, policies.'],
+    ['Networking modules', 'https://github.com/oci-landing-zones/terraform-oci-modules-networking', 'VCNs, DRGs, firewalls, hub and spoke.'],
+    ['Security modules', 'https://github.com/oci-landing-zones/terraform-oci-modules-security', 'Cloud Guard, Security Zones, Vault, scanning.'],
+    ['Observability modules', 'https://github.com/oci-landing-zones/terraform-oci-modules-observability', 'Logging, events, alarms, notifications.'],
+    ['Governance modules', 'https://github.com/oci-landing-zones/terraform-oci-modules-governance', 'Budgets, quotas, tags.'],
+    ['Tailored landing zones (Oracle DevRel)', 'https://github.com/oracle-devrel/technology-engineering/tree/main/landing-zones/tailored_landing_zones', 'How Oracle\'s field team adapts the blueprints.'],
+  ] },
+  { h: 'Identity and policies', items: [
+    ['Policy reference', D.policyRef, 'Every resource type and family, per service.'],
+    ['Verbs', D.verbs, 'What inspect, read, use and manage each allow.'],
+    ['Policy syntax', D.syntax, 'Allow, Define, Endorse, Admit and where clauses.'],
+    ['Advanced policy features', D.advanced, 'Conditions, network sources, request variables.'],
+    ['OKE workload identity', D.wi, 'Pods as principals: no keys in the cluster.'],
+    ['Organization management', D.org, 'Parent and child tenancies, subscriptions.'],
+    ['Governance rules', D.gov, 'Quotas, tags and allowed regions pushed to children.'],
+  ] },
+  { h: 'Networking', items: [
+    ['Networking overview', D.net, 'Start here for VCN concepts.'],
+    ['Security lists', D.seclists, 'Subnet-level stateful rules, and how NSGs differ.'],
+    ['Route tables and rules', D.routes, 'Where each packet goes next.'],
+    ['Network firewall and FastConnect in Core LZ', 'https://blogs.oracle.com/cloud-infrastructure/post/firewall-fastconnect-security-core-landing-zone', 'Hub subnets, firewall placement, on-prem links.'],
+    ['Partner firewalls in a CIS landing zone', 'https://docs.oracle.com/en/solutions/deploy-partners-to-cis-lz/index.html', 'Palo Alto, Fortinet and others in the hub.'],
+  ] },
+  { h: 'FinOps', items: [
+    ['Billing and cost management overview', D.billing, 'Cost Analysis, reports, budgets, subscriptions.'],
+    ['Budgets', D.budgets, 'Compartment or tag targets, actual and forecast alerts.'],
+    ['Compartment quotas', D.quotas, 'The caps that actually block.'],
+    ['Cost and usage reports', D.reports, 'Daily CSVs in Object Storage, FOCUS format.'],
+    ['Organizations for central cost management', 'https://blogs.oracle.com/cloud-infrastructure/use-organizations-to-centrally-manage-costs', 'Parent tenancy sees every child\'s spend.'],
+    ['State of cost governance on OCI', 'https://blogs.oracle.com/cloud-infrastructure/a-state-of-the-union-for-cost-governance-on-oracle-cloud-infrastructure', 'Overview of every cost control.'],
+  ] },
+  { h: 'Reference architectures', items: [
+    ['Well-architected landing zones', 'https://docs.oracle.com/en/solutions/oci-best-practices/simplify-provisioning-oci-landing-zones1.html', 'Oracle\'s best-practice framework entry point.'],
+    ['CIS landing zone solution', 'https://docs.oracle.com/en/solutions/cis-oci-benchmark/index.html', 'Diagrams and reasoning behind the compartment split.'],
+    ['Zero Trust landing zone', 'https://blogs.oracle.com/cloud-infrastructure/accelerating-zero-trust-journey-on-oci-with-landing-zones', 'ZPR, NGFW DMZ, Access Governance, SIEM.'],
+    ['Cloud native SCCA', 'https://blogs.oracle.com/cloud-infrastructure/post/migrating-il4-il5-oracle-cloud-native-scca-sln', 'VDSS, VDMS and the logging split.'],
+    ['Service availability by region', 'https://www.oracle.com/cloud/distributed-cloud/#service-availability', 'Check before picking a region.'],
+  ] },
+  { h: 'Samples and quickstarts', items: [
+    ['OCI Data Science and AI samples', 'https://github.com/oracle-samples/oci-data-science-ai-samples', 'Notebooks, model deployment, LLM serving and AI Quick Actions examples for OCI Data Science.'],
+    ['OCI cloud native (MuShop)', 'https://github.com/oracle-quickstart/oci-cloudnative', 'MuShop: a microservices reference app on OKE using many OCI services, with Terraform and Helm.'],
+  ] },
+  { h: 'Homelab on Always Free', items: [
+    ['OCI free tier breakdown', 'https://fullmetalbrackets.com/blog/oci-free-tier-breakdown', 'Plain-language walkthrough, updated for the 2 OCPU / 12 GB limit.'],
+    ['k3s cluster on OCI (Terraform)', 'https://github.com/r0b2g1t/k3s-cluster-on-oracle-cloud-infrastructure', 'Community k3s on Ampere A1. Written for the old 4 OCPU / 24 GB allowance: halve the node sizes.'],
+    ['Always free Kubernetes', 'https://github.com/hostops/Always-free-kubernetes', 'Another community setup; same caveat on sizing.'],
+  ] },
+  { h: 'Diagrams', items: [
+    ['Mermaid architecture syntax', 'https://mermaid.ai/open-source/syntax/architecture.html', 'The syntax the Architecture view uses.'],
+    ['ondine.sh', 'https://ondine.sh/', 'Rust Mermaid renderer; the Diagram tab links each design there.'],
+  ] },
+];
+const DIRECTORY = [
+  ['Always Free', 'Resources free for the life of the account, in the home region only.', D.free],
+  ['Availability domain (AD)', 'An isolated datacenter within a region; many regions have one.', D.net],
+  ['Bastion', 'Managed, time-limited SSH sessions into private subnets without public IPs.', D.net],
+  ['Budget', 'Monthly spend target on a compartment or tag that sends alerts; it never blocks.', D.budgets],
+  ['Compartment', 'Global folder for resources; policies inherit down, costs roll up, six levels max.', D.policies],
+  ['Cost and usage report', 'Daily CSV of every charge, written to Object Storage.', D.reports],
+  ['Define / Endorse / Admit', 'Policy verbs for cross-tenancy access; both tenancies must agree.', D.syntax],
+  ['DRG (Dynamic Routing Gateway)', 'Regional router connecting VCNs, VPN, FastConnect and other regions.', D.net],
+  ['Dynamic group', 'Group whose members are resources (instances, functions) matched by rules.', D.policies],
+  ['Fault domain', 'A rack-level failure boundary inside an AD; three per AD.', D.net],
+  ['Governance rule', 'A quota, tag namespace or allowed-region rule a parent tenancy locks into children.', D.gov],
+  ['Identity domain', 'The user and group directory of a tenancy.', D.policies],
+  ['Internet gateway', 'Route target that lets a public subnet reach and be reached from the internet.', D.net],
+  ['Landing zone', 'An opinionated, pre-built tenancy layout: compartments, IAM, network, security.', D.lz],
+  ['NAT gateway', 'Outbound-only internet for private subnets. No hourly charge in OCI.', D.net],
+  ['Network security group (NSG)', 'Stateful firewall rules attached to chosen VNICs.', D.seclists],
+  ['OCID', 'The unique ID of every OCI resource, like an AWS ARN.', D.home],
+  ['OKE', 'Oracle Kubernetes Engine, OCI\'s managed Kubernetes.', D.wi],
+  ['Organization', 'A parent tenancy plus child tenancies, with central billing and governance.', D.org],
+  ['Policy', 'Allow statements attached to a compartment granting a group verbs on resource types.', D.policies],
+  ['Quota', 'A cap you set per compartment (set, unset, zero) that blocks over-use.', D.quotas],
+  ['Region', 'A geographic area with one or more ADs; you subscribe explicitly.', D.net],
+  ['Route table', 'Per-subnet rules choosing the next hop for each destination.', D.routes],
+  ['Security list', 'Stateful firewall rules applied to a whole subnet.', D.seclists],
+  ['Service gateway', 'Private path from a VCN to Oracle services such as Object Storage.', D.net],
+  ['Subnet', 'An IP range in a VCN; regional by default, public or private.', D.net],
+  ['Tag (defined / freeform)', 'Key-value metadata; defined tags can be required, defaulted and cost-tracked.', D.billing],
+  ['Tenancy', 'Your OCI account: identity domain, limits, regions, root compartment.', D.home],
+  ['VCN', 'A regional private network with one or more CIDR blocks.', D.net],
+  ['Verbs', 'inspect, read, use, manage: each includes the one before it.', D.verbs],
+  ['Workload identity', 'Lets a Kubernetes service account act as an OCI principal.', D.wi],
+];
+const ext = (t, u) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`;
+function renderLinks() {
+  if ($('#links').dataset.done) return;
+  $('#links').innerHTML = LINKS.map(g => `<article class="card"><h2>${esc(g.h)}</h2><ul class="linklist">${g.items.map(([t, u, d]) => `<li>${ext(t, u)}<span>${esc(d)}</span></li>`).join('')}</ul></article>`).join('');
+  const draw = () => { const f = $('#dirFilter').value.trim().toLowerCase();
+    $('#dir').innerHTML = '<thead><tr><th>Term</th><th>In one line</th><th>Read</th></tr></thead><tbody>' + DIRECTORY.filter(r => !f || (r[0] + ' ' + r[1]).toLowerCase().includes(f)).map(([t, d, u]) => `<tr><td>${esc(t)}</td><td>${esc(d)}</td><td>${ext('docs', u)}</td></tr>`).join('') + '</tbody>'; };
+  $('#dirFilter').oninput = draw; draw();
+  $('#links').dataset.done = '1';
+}
+
+function renderRosetta() {
+  $('#rosetta').innerHTML = `<table class="ros"><thead><tr><th>OCI</th><th>AWS</th><th>GCP</th><th>Azure</th><th>OpenShift / K8s</th><th>Notes</th></tr></thead><tbody>${ROSETTA.map(r => `<tr>${r.map((c, i) => `<td${i === 5 ? ' class="note"' : ''}>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
+// ---------- tabs & wiring ----------
+// ---------- tradeoffs ----------
+const SCOPES = [
+  ['Global (tenancy-wide)', 'IAM: identity domains, users, groups, policies (written in the home region, replicated out); compartments; tag namespaces; budgets; organizations and governance rules; DNS zones and Traffic Management steering; announcements.', 'An IAM change can take a little while to reach other regions. If the home region has an outage, existing access keeps working but IAM edits wait.'],
+  ['Regional', 'VCN, subnets (default), DRG, load balancers, Object Storage, Container Registry (OCIR), OKE control plane, Autonomous Database, Vault, Logging, Monitoring, Functions, API Gateway, Streaming, Notifications.', 'The default scope. Anything regional needs a replication story for DR.'],
+  ['Availability domain', 'Compute instances and their boot volumes, block volumes, File Storage mount targets, VM DB systems, AD-specific subnets (legacy).', 'Spread across ADs where the region has three, or across fault domains where it has one. A block volume attaches only to instances in its AD.'],
+];
+const TRADEOFFS = [
+  { h: 'Which landing zone shape?', ctx: 'Oracle\'s landing zone framework offers several blueprints on the same Terraform modules. Each template in this atlas follows one of them; load it to see the shape.',
+    cols: ['Shape', 'Template here', 'Fits', 'Tradeoff'],
+    rows: [
+      ['Core Landing Zone (successor to the CIS and Enterprise LZs)', 'Core Landing Zone, one-firewall hub', 'Most single-business tenancies', 'CIS-compliant defaults; generic, so you customize for special workloads'],
+      ['Operating Entities, one tenancy (Multi-OE)', 'Operating entities in one tenancy', 'Groups of business units sharing a platform team', 'One identity domain and one set of limits for all units; cheapest to run'],
+      ['Multi-tenancy organization', 'Enterprise organization with landing zones', 'Different owners, legal entities, or hard isolation needs', 'Strongest isolation; every shared service needs cross-tenancy policy'],
+      ['Service provider, pod', 'SaaS provider, one stack per customer', 'Enterprise customers wanting dedicated stacks', 'Clean isolation and per-customer billing; cost and toil scale per customer'],
+      ['Service provider, multi-tenant', 'SaaS provider, shared multi-tenant stack', 'Many small customers', 'Cheapest per customer; isolation lives in your app code'],
+      ['Zero Trust', 'Zero Trust landing zone', 'High-assurance and regulated', 'Firewalls, ZPR, Access Governance, SIEM: highest cost and ops effort'],
+      ['SCCA (US DoD)', 'SCCA-style mission owner', 'Defense mission owners and brokers', 'Compliance-mandated boundary on every flow'],
+    ],
+    verdict: 'Start from Core. Move to Multi-OE when a second business unit arrives, to an organization when someone needs their own admins, and to Zero Trust or SCCA when a regulator says so.' },
+  { h: 'How many firewalls in the hub?', ctx: 'Oracle\'s hub models differ mainly in firewall count and type. Spokes and DRG routing stay the same, so you can upgrade later without re-addressing.',
+    cols: ['Hub model', 'Firewalls', 'Inspects', 'Cost', 'Template here'],
+    rows: [
+      ['A', 'Two OCI Network Firewalls: DMZ and internal', 'Inbound (with TLS decryption before the LB) on one; outbound and spoke-to-spoke on the other', 'About 2x Hub B', 'Two-firewall hub for regulated traffic'],
+      ['B', 'One OCI Network Firewall', 'Inbound, outbound and east-west on one rule base', 'Baseline', 'Core Landing Zone, one-firewall hub'],
+      ['C', 'Third-party pair, active/active', 'Same as B with vendor features (Palo Alto, Fortinet, Check Point)', 'Licenses plus VMs; you patch them', 'Zero Trust landing zone (pair of NGFW VMs)'],
+      ['D', 'Third-party pair, active/passive', 'Same as C, simpler state sync, half the throughput', 'Licenses plus VMs', 'n/a'],
+      ['E', 'None', 'Nothing; NSGs and DRG route tables isolate spokes', 'Lowest', 'Lean hub without a firewall'],
+    ],
+    verdict: 'Hub E for startups, B as the default once you need inspection or a central threat log, A when inbound inspection and throughput must be separate, C or D when your security team already runs a vendor.' },
+  { h: 'Where does the container registry live?', ctx: 'OCIR is regional and lives in one tenancy. Every OKE cluster pulls from it, so its placement sets image pull latency, egress, and how much cross-tenancy policy you write.',
+    cols: ['Option', 'Good for', 'Cost and ops', 'Blast radius', 'Latency'],
+    rows: [
+      ['Registry per tenancy, per region', 'Strict isolation; regulated children; no cross-tenancy IAM', 'N copies of every image; CI pushes N times; drift risk between copies', 'Smallest: a bad push or deleted repo hits one tenancy', 'Best: same-region pulls'],
+      ['One shared-services tenancy, one region', 'Small teams; single-region products', 'One place to scan, sign and retain; needs Endorse/Admit or a pull policy for every consumer', 'Large: registry outage or bad tag stops every cluster scaling', 'Fine in-region; cross-region pulls add tens of ms per layer request and can be slow for big layers'],
+      ['Shared-services tenancy, one registry per region you run in', 'Multi-region orgs; the usual enterprise answer', 'CI pushes to each region (or a sync job with skopeo/Harbor replication); one policy model', 'Medium: per-region failure domain, shared IAM model', 'Same-region pulls everywhere'],
+      ['Self-hosted Harbor on OKE as a pull-through cache', 'Open-source preference; caching Docker Hub/Quay; air-gapped', 'You run and upgrade it; storage in Object Storage', 'You own its uptime', 'Local cache hits are fast; first pull pays upstream latency'],
+    ],
+    verdict: 'Default: build once, push to a registry in every region where clusters run, owned by a shared-services tenancy or compartment. Pin images by digest so every region runs identical bits. For your setup, Harbor as a proxy cache fits the self-hosted preference.',
+    mm: `flowchart LR
+  ci["CI build once, sign"] --> fra["OCIR shared-svc fra"] & ams["OCIR shared-svc ams"]
+  fra --> okeA["OKE prod fra"] & okeS["OKE staging fra"]
+  ams --> okeD["OKE DR ams"]
+  okeA -. "Admit policy / pull secret" .- fra` },
+  { h: 'Shared-services tenancy or duplicate per tenancy?', ctx: 'Logging and SIEM, DNS, secrets, CI runners, artifact storage and monitoring can live once in a shared place or be repeated in every child.',
+    cols: ['Approach', 'Wins', 'Costs', 'Use when'],
+    rows: [
+      ['Shared-services compartment (one tenancy)', 'One IAM model, no cross-tenancy statements, cheap', 'Isolation is only as strong as your policies', 'Single tenancy, small team, startup'],
+      ['Shared-services tenancy in an organization', 'Central ownership; children stay clean; parent sees cost', 'Every consumer needs Endorse/Admit pairs; harder debugging', 'Several child tenancies that all need the same platform'],
+      ['Duplicate in each tenancy', 'Full autonomy and isolation; no shared outage', 'N times the cost and toil; config drift', 'Regulated or acquired units; tenancies with different owners'],
+      ['Hybrid: central control plane, local data plane', 'Policies, golden images, audit archive central; registries, caches, log buffers local', 'More moving parts', 'Multi-region, multi-tenancy enterprises'],
+    ],
+    verdict: 'Centralize things that are read-mostly and governed (audit archive, golden images, policy, DNS). Localize things in the request path (registry pulls, secrets reads, log ingestion buffers) so a shared outage or a far region does not slow every request.' },
+  { h: 'Cross-region replication menu', ctx: 'Nothing regional replicates by itself. Pick per data type, and know whether the copy is asynchronous (RPO greater than zero).',
+    cols: ['Data', 'OCI mechanism', 'Mode', 'Notes'],
+    rows: [
+      ['Object Storage', 'Bucket replication policy to a bucket in another region', 'Async, one way', 'Target bucket is read-only while replication is on. Mind egress if you exceed 10 TB/month.'],
+      ['Block and boot volumes', 'Cross-region volume replication or cross-region backup copy', 'Async', 'Replication gives lower RPO than periodic backup copies.'],
+      ['Autonomous Database', 'Autonomous Data Guard cross-region standby, or backup-based DR', 'Async (local standby can be sync-like)', 'Standby costs about as much as primary; backup-based DR is cheaper with a longer RTO.'],
+      ['File Storage', 'File system replication', 'Async, scheduled', 'Interval sets your RPO.'],
+      ['Vault keys', 'Cross-region replication for virtual private vaults', 'Async', 'Default vaults do not replicate; back up keys or use a private vault.'],
+      ['Container images', 'CI multi-push or Harbor/skopeo sync', 'Your choice', 'Treat as code: rebuildable, so RPO matters less than RTO.'],
+      ['Kubernetes state', 'GitOps (Argo CD / Flux) applies the same manifests to both clusters; Velero for persistent volumes', 'Declarative', 'Keep clusters cattle; only data needs replication.'],
+    ],
+    verdict: 'Rank data by how painful loss is. Rebuildable things (images, clusters) need automation, not replication. Customer data needs replication with a known RPO, tested by actually failing over.' },
+  { h: 'One VCN per environment or a shared hub?', ctx: 'Network shape decides who can break whom and where traffic is inspected.',
+    cols: ['Shape', 'Wins', 'Costs'],
+    rows: [
+      ['One VCN, many subnets', 'Simplest; no DRG; good for solo and tiny teams', 'Environments share security lists and route tables; a mistake leaks across'],
+      ['VCN per environment, no peering', 'Clean isolation; CIDRs can even overlap', 'No private path between them; shared services need public endpoints or duplication'],
+      ['Hub and spoke on a DRG', 'Central egress, firewall, VPN; spokes isolated by DRG route tables', 'Non-overlapping CIDR plan required; the hub is a shared dependency; firewall cost'],
+      ['Spoke per tenancy across an organization', 'Isolation at both IAM and network level', 'Cross-tenancy DRG attachments need policy on both sides'],
+    ],
+    verdict: 'Plan a non-overlapping CIDR scheme on day one, even as a solo hacker: 10.<env>.0.0/16 per environment costs nothing and makes a later DRG trivial.' },
+  { h: 'Compartments or tenancies?', ctx: 'The most expensive decision to reverse.',
+    cols: ['Boundary', 'Isolation', 'Effort', 'Reversible?'],
+    rows: [
+      ['Compartment', 'Policy-based; one identity domain; shared service limits', 'Minutes', 'Resources can move between compartments; renaming is easy'],
+      ['Child tenancy (organization)', 'Hard: separate identity domain, limits, admins', 'Hours, plus cross-tenancy policy for sharing', 'Resources cannot move between tenancies; you rebuild'],
+    ],
+    verdict: 'Start with compartments. Split into tenancies for a different owner, a hard regulatory wall, or to stop one team\'s limits and mistakes from touching another.' },
+];
+const HOPS = [['Same fault domain / same host rack', 0.1], ['Across ADs in one region', 0.7], ['Nearby regions, e.g. Frankfurt and Amsterdam', 10], ['Same continent, far, e.g. Frankfurt and Jerusalem', 50], ['Transatlantic, e.g. Frankfurt and Ashburn', 90], ['Transpacific, e.g. San Jose and Tokyo', 110], ['Europe and Asia, e.g. Frankfurt and Singapore', 160]];
+async function renderTradeoffs() {
+  const el = $('#tradeoffs');
+  if (!el.dataset.done) {
+    el.innerHTML = `<div class="card"><h2>What scope does each service have?</h2><p class="muted" style="font-size:.88rem">Scope decides what you must replicate and what a regional outage takes down.</p>
+      <div class="scope">${SCOPES.map(([h, b, n]) => `<div><b>${esc(h)}</b><span>${esc(b)}</span><span class="muted">${esc(n)}</span></div>`).join('')}</div></div>
+      <div class="card"><h2>Latency budget</h2><p class="muted" style="font-size:.88rem">Round-trip times are order-of-magnitude figures for intuition, not measurements. Sequential calls multiply: a request that reads a secret, a config and a row from another region pays the round trip three times.</p>
+        <div class="lat"><div class="field"><label for="hop">Where the dependency is</label><select id="hop">${HOPS.map(([l, v], i) => `<option value="${v}"${i === 3 ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+        <div class="field"><label for="calls">Sequential calls per user request</label><input type="number" id="calls" min="1" max="50" value="3"></div>
+        <div class="field"><span class="lbl">Added latency per request</span><output id="latOut" for="hop calls"></output></div></div>
+        <p class="muted" style="font-size:.85rem" id="latNote"></p></div>
+      <div class="tradeoffs-grid">${TRADEOFFS.map((t, i) => `<article class="card"><h2>${esc(t.h)}</h2><p style="font-size:.92rem">${esc(t.ctx)}</p>
+        <div class="scroll-x"><table class="opts"><thead><tr>${t.cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${t.rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+        <p class="verdict">${esc(t.verdict)}</p>${t.mm ? `<div class="learn"><div class="mm" id="tmm${i}"></div></div>` : ''}</article>`).join('')}</div>`;
+    const calc = () => { const v = +$('#hop').value, n = Math.max(1, Math.min(50, +$('#calls').value || 1)), ms = v * n;
+      $('#latOut').textContent = (ms < 10 ? ms.toFixed(1) : Math.round(ms)) + ' ms';
+      $('#latNote').textContent = ms < 5 ? 'Invisible to users. Keep chatty services this close.' : ms < 100 ? 'Noticeable in tight loops. Cache, batch, or keep a regional replica of the dependency.' : 'Users will feel this. Move the dependency into the caller\'s region, or make the calls parallel or asynchronous.'; };
+    $('#hop').onchange = calc; $('#calls').oninput = calc; calc();
+    el.dataset.done = '1'; el.dataset.theme = '';
+  }
+  if (el.dataset.theme !== String(dark())) { el.dataset.theme = String(dark()); for (const [i, t] of TRADEOFFS.entries()) if (t.mm) await renderInto($('#tmm' + i), t.mm); }
+}
+
+const TABS = [['build', 'Build'], ['diagram', 'Diagram'], ['review', 'Review'], ['terraform', 'Terraform'], ['missions', 'Missions'], ['learn', 'Learn'], ['tradeoffs', 'Tradeoffs'], ['rosetta', 'Rosetta'], ['links', 'Links']];
+function setTab(t) {
+  tab = t; document.body.dataset.tab = t;
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
+  if (t === 'learn') renderLearn();
+  if (t === 'tradeoffs') renderTradeoffs();
+  if (t === 'terraform') renderTerraform();
+  if (t === 'links') renderLinks();
+  if (t === 'build' || t === 'diagram') scheduleDraw();
+  try { localStorage.setItem(LS + '-tab', t); } catch (e) {}
+}
+function refresh(keepInspectorFocus) {
+  const active = document.activeElement?.id;
+  renderTree(); renderInspector(); renderReview(); renderMissions(); save(); scheduleDraw();
+  if (tab === 'terraform') renderTerraform();
+  $('#notes').hidden = !S.notes; $('#notes').innerHTML = S.notes ? `<span class="eyebrow">${esc(S.title || 'Template')}</span><br>${esc(S.notes)}` : '';
+  document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('primary', b.dataset.view === view));
+  document.querySelectorAll('[data-renderer]').forEach(b => b.classList.toggle('primary', b.dataset.renderer === renderer));
+  $('#viewHelp').textContent = view === 'logical'
+    ? 'Logical: tenancy, then compartments, then the VCNs and resources they own. This is how IAM and cost see your design.'
+    : 'Physical: tenancy, then regions, then VCNs. Compartments vanish into labels, because they are not places. This is how traffic sees your design.';
+  if (keepInspectorFocus && active && document.getElementById(active)) document.getElementById(active).focus();
+}
+
+$('#tabs').innerHTML = TABS.map(([k, l]) => `<button role="tab" data-tab="${k}">${l}</button>`).join('');
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) setTab(b.dataset.tab); });
+$('#preset').innerHTML = '<option value="">Templates…</option>' + Object.entries(PRESETS).map(([k, p]) => `<option value="${k}">${esc(p.title)}</option>`).join('');
+$('#loadPreset').onclick = () => { const k = $('#preset').value; if (!k) { toast('Pick a template first'); return; } pushUndo(); loadPreset(k); refresh(); toast(`Loaded "${PRESETS[k].title}"`, true); };
+$('#undo').onclick = undo;
+$('#score').onclick = () => setTab('review');
+$('#addTenancy').onclick = () => { pushUndo(); if (!S) S = blankState(); selected = mk('tenancy', null, { name: 'tenancy-' + (tenancies().length + 1) }); refresh(); };
+$('#tree').addEventListener('click', e => {
+  const a = e.target.closest('[data-add]'), d = e.target.closest('[data-del]'), row = e.target.closest('.node');
+  if (a) {
+    const parent = byId(selected), kind = a.dataset.add; pushUndo();
+    const props = { comp: { name: 'compartment-' + S.seq }, vcn: { name: 'vcn-' + S.seq }, drg: { name: 'drg-' + S.seq }, subnet: {}, res: {} }[kind];
+    if (kind === 'subnet') { const v = cidr(parent.cidr), n = kidsOf(parent.id, 'subnet').length; if (v && v.len <= 24) { const s = v.start + n * 256; props.cidr = [s >>> 24, (s >> 16) & 255, (s >> 8) & 255, 0].join('.') + '/24'; } props.name = n ? 'subnet-' + n : 'public'; props.public = !n; }
+    if (kind === 'res') { const sub = parent.kind === 'subnet'; props.type = sub ? 'a1' : 'bucket'; props.name = sub ? 'instance-' + S.seq : 'bucket-' + S.seq; }
+    selected = mk(kind, parent.id, props); refresh(); return;
+  }
+  if (d) {
+    const n = byId(selected); if (!n) return; pushUndo();
+    const gone = new Set([n.id, ...descendants(n.id).map(x => x.id)]);
+    S.nodes = S.nodes.filter(x => !gone.has(x.id));
+    S.nodes.forEach(x => { if (gone.has(x.drg)) x.drg = ''; if (gone.has(x.comp)) x.comp = ''; if (gone.has(x.orgParent)) x.orgParent = ''; });
+    selected = n.parent; refresh(); toast(`Deleted ${n.name}`, true); return;
+  }
+  if (row) { selected = row.dataset.id; renderTree(); renderInspector(); }
+});
+$('#tree').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('node')) { e.preventDefault(); selected = e.target.dataset.id; renderTree(); renderInspector(); document.querySelector(`.node[data-id="${selected}"]`)?.focus(); } });
+$('#inspector').addEventListener('change', onInspectorChange);
+$('#inspector').addEventListener('click', e => {
+  if (e.target.id !== 'genPol') return;
+  const t = byId(selected); if (!t || t.kind !== 'tenancy') return;
+  pushUndo(); generatePolicies(t); refresh(); toast(`Generated ${policyLines(t).length} policy statements`, true);
+});
+$('#copyTf').onclick = () => copy($('#tfsrc').textContent, 'main.tf copied', $('#tfsrc'));
+const goto = e => { const g = e.target.closest('[data-goto]'); if (!g) return; selected = g.dataset.goto; setTab('build'); renderTree(); renderInspector(); document.querySelector(`.node[data-id="${selected}"]`)?.scrollIntoView({ block: 'center' }); };
+$('#lint').addEventListener('click', goto);
+$('#lint').addEventListener('keydown', e => { if (e.key === 'Enter') goto(e); });
+document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => { view = b.dataset.view; refresh(); });
+document.querySelectorAll('[data-renderer]').forEach(b => b.onclick = () => { renderer = b.dataset.renderer; refresh(); });
+function applyFit() { const b = $('#diagram'), svg = b.querySelector('svg'); b.className = 'diagram-box ' + (fit ? 'fit' : 'actual'); $('#fit').textContent = fit ? 'Actual size' : 'Fit width'; if (svg && b.dataset.w) svg.style.width = fit ? '100%' : b.dataset.w + 'px'; }
+$('#fit').onclick = () => { fit = !fit; applyFit(); };
+async function copy(text, okMsg, fallbackEl) {
+  try { await navigator.clipboard.writeText(text); toast(okMsg); }
+  catch (e) { if (fallbackEl) { fallbackEl.value !== undefined ? fallbackEl.select() : getSelection().selectAllChildren(fallbackEl); } toast('Copy blocked here: the text is selected, copy it manually'); }
+}
+$('#copyMm').onclick = () => { $('#mmsrc').closest('details').open = true; copy($('#mmsrc').textContent, 'Mermaid copied', $('#mmsrc')); };
+$('#copyJson').onclick = () => { const j = JSON.stringify(S, null, 1); $('#json').value = j; copy(j, 'Design JSON copied', $('#json')); };
+$('#importJson').onclick = () => {
+  try { const d = JSON.parse($('#json').value); if (!d || !Array.isArray(d.nodes) || typeof d.seq !== 'number') throw new Error('missing nodes or seq');
+    d.nodes.forEach(n => { if (!KIND[n.kind] || typeof n.id !== 'string') throw new Error('unknown node ' + JSON.stringify(n).slice(0, 60)); if (n.kind === 'res' && !RTYPES[n.type]) throw new Error('unknown resource type ' + n.type); });
+    pushUndo(); S = d; selected = null; refresh(); toast('Design imported', true); }
+  catch (e) { toast('Import failed: ' + e.message); }
+};
+$('#blank').onclick = () => { pushUndo(); S = blankState(); selected = mk('tenancy', null, { name: 'my-tenancy' }); refresh(); toast('Started a blank design', true); };
+const mq = matchMedia('(prefers-color-scheme: dark)');
+const onTheme = () => { if (tab === 'learn') renderLearn(); if (tab === 'tradeoffs') renderTradeoffs(); scheduleDraw(); };
+mq.addEventListener?.('change', onTheme);
+new MutationObserver(onTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+// boot: saved design, else the solo template (closest to the user's own free node)
+if (!load()) loadPreset('solo');
+selected = selected || tenancies()[0]?.id || null;
+let startTab = 'build'; try { startTab = localStorage.getItem(LS + '-tab') || 'build'; } catch (e) {}
+setTab(TABS.some(t => t[0] === startTab) ? startTab : 'build');
+renderRosetta();
+refresh();
+window.atlas = { archToFlow, terraformBlocks, generatePolicies, tenancies, PRESETS, loadPreset, mermaidSrc, lint, renderInto, MISSIONS, get S() { return S; } };
+</script>
+
+</body>
+</html>
