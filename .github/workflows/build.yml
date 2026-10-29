@@ -1,0 +1,38 @@
+name: Build dist branch
+
+# Builds a single self-contained index.html and force-pushes it to the `dist` branch,
+# so the latest static build is always one download away.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dist
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build single-file page
+        run: node scripts/build.mjs
+      - name: Push to dist branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist
+          git init -q -b dist
+          git add index.html
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q -m "Build from ${GITHUB_SHA::7}"
+          # dist holds only the latest build, so history is replaced each time
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" dist

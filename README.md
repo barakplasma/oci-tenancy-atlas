@@ -2,7 +2,13 @@
 
 A single-page, no-build playground for learning Oracle Cloud Infrastructure layout: tenancies, compartments, VCNs, subnets, DRGs, policies and spend. Design something, see it as a diagram, get a review, and export Terraform.
 
-Open `index.html` in a browser, or serve the folder with any static server (GitHub Pages works).
+Open `index.html` in a browser, or serve the folder with any static server.
+
+## Download a single-file build
+
+Every push to `main` builds `index.html` with the vendored renderer inlined and force-pushes it to the `dist` branch. Download it from the `dist` branch on GitHub (Code → Download ZIP), or build it yourself with `node scripts/build.mjs`, which writes `dist/index.html`.
+
+The built file works offline. It only reaches the network for Google Fonts (falls back to system fonts) and Mermaid from jsDelivr, which is used only when you pick a Mermaid renderer in the Diagram tab.
 
 ## What's inside
 
